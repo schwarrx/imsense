@@ -1,0 +1,13 @@
+Proposed research topics for XRX collaboration 2015 
+
+
+1. Demonstrate printer interoperability with XRX specified file formats
+2. Identify feasible color specification options (patterns, textures,..?) and implement color mapping on solid model
+3. Optimize part printing orientation for support structure (volume and accessibility)
+4. Estimate printing and post-processing time and cost for a chosen build orientation
+4. Develop material properties ('optical pancakes') model for color ink
+5. Extend build orientation optimization algorithm & time+cost evaluation to include material properties 
+6. For multiple parts, identify optimal packing by choosing best fit for individually optimal build orientation
+7. Develop planning and scheduling system for multiple parts over multiple printers (plantrol or printcise?)
+8. Develop front end for user-interaction, debug, and visualization for XRX 
+
