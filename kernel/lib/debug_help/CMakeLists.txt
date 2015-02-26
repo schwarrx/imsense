@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.6)
+project(debug_help)
+message("Project: debug_help")
+include_directories(${PROJECT_SOURCE_DIR})
+add_library(debug_help logcf.cpp timestamp.cpp )
+target_link_libraries(debug_help json) 
