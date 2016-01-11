@@ -16,6 +16,11 @@
 
 
 #include "opencv2/opencv.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
+#include <opencv2/highgui.hpp>
+#include <opencv2/video.hpp>
 
 using namespace af;
 using namespace std;
@@ -36,11 +41,11 @@ typedef struct{
 af::array normalize(af::array a);
 void drawRectangle(af::array &out, unsigned x, unsigned y, unsigned dim0, unsigned dim1);
 
-//location of minimum difference of abs values
-point templateTRACK(af::array img, af::array chip, unsigned int width, unsigned int height, int x, int y, double &ct);
+int trackParticles(string input);
 
 
-int trackParticles(const string& filename);
+//convert opencv Mat to arrayfire array
+void mat2array(cv::Mat& input, array& output);
 
 
 

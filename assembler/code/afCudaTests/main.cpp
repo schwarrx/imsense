@@ -20,8 +20,16 @@ int main(int argc, char** argv)
 		af::setDevice(device);
 		af::info();
 		std::cout << "** ArrayFire, OpenCV, and CUDA tests for A2P  **" << std::endl;
-		std::cout << "usage: ./a2pcv-cuda videofile " << std::endl;
-		trackParticles(argv[0]);
+
+		CommandLineParser parser(argc, argv, "{help h||}{@input||}");
+		if (parser.has("help"))
+		{
+			std::cout << "usage: ./a2pcv-cuda videofile " << std::endl;
+			return 0;
+		}
+		string input = parser.get<std::string>("@input");
+		trackParticles(input);
+
 
 	} catch (af::exception& ae) {
 		std::cerr << ae.what() << std::endl;
