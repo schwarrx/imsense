@@ -49,9 +49,14 @@ def match(X_t, weights_t, means_t, sigmas_t):
     if not(matches):
         # lowest peaking distribution is replaced with a new wide Gaussian 
         # centered at the new pixel value
-        idx = means_t.index(min(weights_t))
+
+        ##### Need to classify as foreground ..otherwise everything will always
+        # be in the background    
+    
+        peaks = [weight/(sigma*sqrt(2*pi)) for (weight,sigma) in zip(weights_t,sigmas_t)]
+        idx = peaks.index(min(peaks))
         means_t[idx] = X_t
-        #sigmas_t[idx] = 
+        sigmas_t[idx] = 50 # some large number 
     else:
         assert (len(matches) ==1) # assert there is only one match
         # return the index of the Gaussian in the mixture model for which there is match
@@ -86,14 +91,16 @@ def main():
     sigmas = [20,5,10] 
     weights=[0.2,0.2,0.6]
     f = mog(x,weights, means,sigmas) 
-    show(x,f)
+    #show(x,f)
     # create current state for one of the components 
-    X_t = 150
+    X_t = 250
     t = 5
-    k = match(X_t, weights,means,sigmas) 
-    update_priors(X_t,k,t,weights,means,sigmas)  
+    k = match(X_t, weights,means,sigmas)  
+    if(not(not(k))):
+        update_priors(X_t,k,t,weights,means,sigmas)   
+
     print segment(weights, sigmas)
-    
+    print weights,sigmas
 
 # Et voila
 if __name__ == "__main__":
