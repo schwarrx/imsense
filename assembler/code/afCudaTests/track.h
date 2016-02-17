@@ -47,7 +47,10 @@ int trackParticles(string input);
 //convert opencv Mat to arrayfire array
 void mat2array(cv::Mat& input, array& output);
 
+point templateMatch(af::array img, af::array chip);
 
-
+int demoCDC();
+int getdir (std::string dir, vector<std::string> &files);
+bool numeric_string_compare(const std::string& s1, const std::string& s2);
 
 #endif /* TRACK_H_ */

@@ -29,7 +29,7 @@ int main(int argc, char** argv)
 		}
 		string input = parser.get<std::string>("@input");
 		trackParticles(input);
-
+		//demoCDC();
 
 	} catch (af::exception& ae) {
 		std::cerr << ae.what() << std::endl;
@@ -52,21 +52,7 @@ int main(int argc, char** argv)
 }
 
 
-int getdir (std::string dir, vector<std::string> &files)
-{
-	DIR *dp;
-	struct dirent *dirp;
-	if((dp  = opendir(dir.c_str())) == NULL) {
-		cout << "Error(" << errno << ") opening " << dir << endl;
-		return errno;
-	}
 
-	while ((dirp = readdir(dp)) != NULL) {
-		files.push_back(std::string(dirp->d_name));
-	}
-	closedir(dp);
-	return 0;
-}
 
 bool is_not_digit(char c)
 {
