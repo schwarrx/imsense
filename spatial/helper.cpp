@@ -223,7 +223,7 @@ void visualize(array x){
 	// Create a 3D model using marching cubes
 	vtkSmartPointer<vtkMarchingCubes> mc =
 			vtkSmartPointer<vtkMarchingCubes>::New();
-	mc->SetInputConnection(imageData->GetProducerPort());
+	mc->SetInputData(imageData);
 	mc->ComputeNormalsOn();
 	mc->ComputeGradientsOn();
 	mc->SetValue(0, 1);  // second value acts as threshold

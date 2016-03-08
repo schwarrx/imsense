@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <assert.h>
+#include <omp.h>
 
 #include "ufabRV.h"
 #include "helper.h"
@@ -25,58 +26,60 @@ int main(int argc, char *argv[])
 		af::setDevice(device);
 		af::info();
 
-		int ndevices = devicecount();
+		int ndevices = getDeviceCount();
 
 		std::cout << "Running tests for 3d removal volumes on " << ndevices << " devices" << std::endl;
 
-		array x = read_binvox(argv[1]);
-		cout << "Part dimensions = " << x.dims() << endl;
 
 		// Find out how many parts can be copied on the gpu at once
 		// allocate memory on the GPU
 		// find out allocated memory on device
-		//size_t bytes; size_t buffers; size_t lock_bytes; size_t lock_buffers;
-		//deviceMemInfo(&bytes, &buffers, &lock_bytes, &lock_buffers);
-		//cout << lock_bytes << endl;
 
 		//array y = read_binvox(argv[2]); // Cutting portion
 
+		//omp_set_num_threads(ndevices-1);
 
-		array y1 = read_binvox(argv[3]); // Cutting portion
-		cout << "Cutting surface dimensions = " <<  y1.dims() << endl;
+//#pragma omp parallel
+//{
+		//unsigned int cpu_thread_id = omp_get_thread_num();
+		//unsigned int num_cpu_threads = omp_get_num_threads();
+		for (int i = 0; i < ndevices-1 ; i++)
+		{
+		//setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
+		setDevice(i);
+		//cout << "CPU thread " << cpu_thread_id << " of " << num_cpu_threads << "  uses device " << getDevice() << endl;
+		int n = 25;
+		//deviceGC();
+		//size_t bytes; size_t buffers; size_t lock_bytes; size_t lock_buffers;
+		//deviceMemInfo(&bytes, &buffers, &lock_bytes, &lock_buffers);
+		//cout << bytes << endl;
 
-		int n = 9;
-		int part_dim = x.dims()[0];
-		int tool_dim = 50; // 50 voxels per tool
-		int rv_dim = part_dim + tool_dim-1;
-		//cout << rv_dim << endl;
-
-		vector<array> allTools;
-		for (int i = 0; i < ndevices ; i++){
-			deviceset(i);
-			allTools.push_back(array(tool_dim, tool_dim, tool_dim, n));
-		}
-
-		array removal_vols = array(rv_dim, rv_dim, rv_dim,n);
-
+		//array x = read_binvox(argv[1]);
+		array x = randu(100,100,100);
+		int x_dim = x.dims()[0];
+		int t_dim = 50; // 50 voxels per tool
+		int rv_dim = x_dim + t_dim-1;
+		//array y1 = read_binvox(argv[3]); // Cutting portion
+		//cout << "Part dimensions = " << x.dims() << endl;
+		//cout << "Cutting surface dimensions = " <<  y1.dims() << endl;
+         	array removal_vols = array(rv_dim, rv_dim, rv_dim,n);
+		array all_t = array(t_dim, t_dim, t_dim, n);
 		af::timer::start();
-		for(int i = 0; i < ndevices ; i++){
-			deviceset(i);
-			gfor (seq j, n){
-						allTools[i](span,span,span,j) = read_binvox(argv[2]);
-			}
+		gfor (seq j, n){
+		     //allTools(span,span,span,j) = read_binvox(argv[2]);
+		     all_t(span,span,span,j) = randu(t_dim, t_dim,t_dim);
+		}
+		//gfor (seq j,n){
+		for (int j = 0; j < n; j++){
+		     //removal_vols(span,span,span,j) = maxRV(x,allTools(span,span,span,j),y1);
+		     //maxRV(x,allTools(span,span,span,j),y1);
+                     convolve3(x,all_t(span,span,j));
+		}
+		deviceGC();
+          	cout << "Done computing in  " << af::timer::stop() << " s" <<  endl;
+
 		}
 
-		//cout << "Done allocating "  << n << " tool arrays on the GPU" << endl;/
-		// allocate memory for max removal volume
-
-		for(int i = 0 ; i < ndevices; i++){
-			for (int j = 0; j < n; j++){
-					//gfor(seq i,n){
-			removal_vols(span,span,span,i) = maxRV(x,allTools[i](span,span,span,i),y1);
-			}
-		}
-		cout << "Done computing in  " << af::timer::stop() << " s" <<  endl;
 
 
 		//visualize(removal_vols(span,span,span,2));
