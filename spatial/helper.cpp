@@ -129,6 +129,7 @@ af::array read_binvox(string filespec)
 	input->close();
 
 	af::array A = af::array(width, depth, height, voxels);
+	A = A.as(f32);
 	//cout << "read " << nr_voxels << " voxels" << endl;
 	//cout << "Array dimensions = " << A.dims() << endl;
 	//af_print(A);
@@ -137,6 +138,60 @@ af::array read_binvox(string filespec)
 
 }
 
+/*
+__global__ void transform_tex(float *dest, int w, int h, int d,  float x11, float x12, float x13,
+                        float x21, float x22, float x23,
+                        float x31, float x32, float x33,
+                        float tx, float ty, float tz)
+        {
+          int x_i= threadIdx.x;
+      int y_i= blockIdx.x;
+      int z_i= blockIdx.y;
+
+
+        // Convert to cartesian coordinates - swap x and z
+        float z = x_i;
+        float y = y_i;
+        float x = z_i;
+
+        // Normalize coordinates, also consider only center of voxels
+        // Transform grid from (0,0,0)-(1,1,1) to (-0.5,-0.5,-0.5)- (0.5,0.5,0.5)
+        // This way (0,0,0) is in the center of the grid
+        x = (x+0.5)/w -0.5;
+        y = (y+0.5)/h -0.5;
+        z = (z+0.5)/d -0.5;
+
+
+
+        tx = tx/w;
+        ty = ty/h;
+        tz = tz/d;
+
+
+        // Rotate the coordinates (inverse transformation )
+        // idea is to transform the coordinates of the voxel grid by the inverse transformation to map to points on the
+        // original grid from which an interpolated value can be computed
+         float sx = x11*(x-tx)+ x21*(y-ty) + x31*(z-tz);
+         float sy = x12*(x-tx)+ x22*(y-ty) + x32*(z-tz);
+         float sz = x13*(x-tx)+ x23*(y-ty) + x33*(z-tz);
+
+        // Translate and scale back to (0,0,0)-(w,h,d)
+        sx = (sx + 0.5)*w;
+        sy = (sy + 0.5)*h;
+        sz = (sz + 0.5)*d;
+
+        // Get the correct coordinates in the array - swap sx and sz
+        float temp = sx;
+        sx = sz; sz = temp;
+
+        if((sx <0) || (sy < 0) || (sz <0) || (sx >=w) || (sy >=h) || (sz >=d))
+            return;
+
+     int ix= y_i*w + x_i;
+         dest[(z_i*w*h)+ix] = tex3D(mtx_tex,sx,sy,sz);
+        }
+
+  */
 
 void visualize(array x){
 	// copy data from device to host and visualize on vtk
@@ -179,10 +234,11 @@ void visualize(array x){
 	confilter->SetInputConnection(mc->GetOutputPort());
 	confilter->SetExtractionModeToLargestRegion();
 
+	bool extractMaxIsoSurface = false;
 	// Create a mapper
 	vtkSmartPointer<vtkPolyDataMapper> mapper =
 			vtkSmartPointer<vtkPolyDataMapper>::New();
-	if (true)
+	if (extractMaxIsoSurface)
 	{
 		mapper->SetInputConnection(confilter->GetOutputPort());
 	}
