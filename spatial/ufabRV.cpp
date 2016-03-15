@@ -49,8 +49,8 @@ array maxRV(array x, array y, array y1){
 	// translational configuration space obstacle - could do conjugate if using
 	// fft but sometimes direct convolution may be faster on the GPU, and
 	// ArrayFire decides whether or not to use the FFT
-	//return dilate3(indicator(sublevel_complement(convolve3(x,y,AF_CONV_EXPAND,AF_CONV_AUTO),1)),y1);
-	return convolve3(x,y,AF_CONV_EXPAND);
+	return dilate3(indicator(sublevel_complement(convolve3(x,y,AF_CONV_EXPAND,AF_CONV_AUTO),1)),y1);
+	//return convolve3(x,y,AF_CONV_EXPAND);
 	//return dilate3(x,y1);
 
 
