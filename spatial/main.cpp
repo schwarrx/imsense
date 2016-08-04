@@ -28,57 +28,65 @@ int main(int argc, char *argv[])
 
 		int ndevices = getDeviceCount();
 
-		std::cout << "Running tests for 3d removal volumes on " << ndevices << " devices" << std::endl;
+		std::cout << "Running tests for 3d removal volumes on " << ndevices-1 << " devices" << std::endl;
 
 
 		// Find out how many parts can be copied on the gpu at once
 		// allocate memory on the GPU
 		// find out allocated memory on device
 
-		//array y = read_binvox(argv[2]); // Cutting portion
 
-		omp_set_num_threads(ndevices-1);
-
-#pragma omp parallel
-{
-		unsigned int cpu_thread_id = omp_get_thread_num();
-		unsigned int num_cpu_threads = omp_get_num_threads();
-		for (int i = 0; i < ndevices-1 ; i++)
+		//omp_set_num_threads(ndevices); 
+		
+//#pragma omp parallel
+//{
+		//unsigned int cpu_thread_id = omp_get_thread_num();
+		//unsigned int num_cpu_threads = omp_get_num_threads();
+		for (int i = 0; i < ndevices ; i++)
 		{
-		setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
-		//setDevice(i);
-		cout << "CPU thread " << cpu_thread_id << " of " << num_cpu_threads << "  uses device " << getDevice() << endl;
-		int n = 25; // fit 25 tools per gpu
+		
+		//setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
+		setDevice(i); 
+		//cout << "CPU thread " << cpu_thread_id << " of " << num_cpu_threads << "  uses device " << getDevice() << endl;
+		
+		/////////////// NOTE : WE ARE ASSUMING THE SAME TOOL FOR EVERY ORIENTATION //////////////////
+		
+		// #todo : describe n as a function of available memory
+		int n = 60; // fit 85 tools per gpu
 
-		array x = read_binvox(argv[1]);
-		int x_dim = x.dims()[0];
+		// part assembly indicator function 
+		array part = read_binvox(argv[1]);
+		int partDim = part.dims()[0];
 
-
-		int t_dim = 50; // 50 voxels per tool
-		int rv_dim = x_dim + t_dim-1;
-		array y1 = read_binvox(argv[3]); // Cutting portion
-		//cout << "Part dimensions = " << x.dims() << endl;
-		//cout << "Cutting surface dimensions = " <<  y1.dims() << endl;
-        array removal_vols = array(rv_dim, rv_dim, rv_dim,n);
-		array allTools = array(t_dim, t_dim, t_dim, n);
+		// tool assembly indicator function
+		array toolAssembly = read_binvox(argv[2]);
+		//assume tool assembly voxel resolution is tDim * tDim * tDim
+		int tDim = toolAssembly.dims()[0]; 
+		
+		cout << partDim << "," << tDim << endl;
+		
+		// calculate the maximal machinable volume resolution
+		int rvDim = partDim + tDim -1;
+		array removalVolumes = array(rvDim, rvDim, rvDim,n);
+		
+		// set the tool plunge volume as a function of length, width, depth of cut
+		// this will result in an infinitesimal pocket
+		array infPocket = toolPlungeVolume(5,5,5); // note - only cube masks supported in arrayfire cuda
+		
+		cout << "starting " << endl;
+		
 		af::timer::start();
-		gfor (seq j, n){
-		     allTools(span,span,span,j) = read_binvox(argv[2]);
-		}
-		//gfor (seq j,n){
-		for (int j = 0; j < n; j++){
-		     //removal_vols(span,span,span,j) = maxRV(x,allTools(span,span,span,j),y1);
-		     maxRV(x,allTools(span,span,span,j),y1);
-		}
-		deviceGC();
+		//for (int j = 0; j < n; j++){
+		gfor (seq j,n){
+		     removalVolumes(span,span,span,j) = maxRV(part, toolAssembly, infPocket); 
+		     //maxRV(part, toolAssembly);
+		} 
           	cout << "Done computing in  " << af::timer::stop() << " s" <<  endl;
+ 
+		//}
+		visualize(removalVolumes(span,span,span,2));
 
-		}
-
-}
-
-		//visualize(removal_vols(span,span,span,2));
-		//array maxrv;
+} 
 
 
 	} catch (af::exception& e) {

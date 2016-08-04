@@ -7,13 +7,9 @@
 
 #include "ufabRV.h"
 
+#include "assert.h"
 
 
-
-array reflect_ft(array x){
-	// reflect an array by taking fft conjugate - hermitian
-	return real(ifft3(conjg(fft3(x.as(f32))))).as(x.type());
-}
 
 array indicator(array x){
 	// returns the support of a scalar function x
@@ -31,29 +27,41 @@ double volume(array x){
 	return 0;
 }
 
-array sublevel_complement(array x, double measure){
+array sublevelComplement(array x, double measure){
 	// This the complement of the sub-level sets defined in our papers
 	// because we are computing convolution directly with the part, and not with
 	// the part complement
 	return (x < measure);
 }
 
-array maxRVFT(array x, array y, array y1){
-	array cspace = real(ifft3(fft3(x.as(f64) * conjg(fft3(y.as(f64))))));
-	return cspace;
+
+array toolPlungeVolume(int length, int width, int depth){
+
+	// Describe the volume removed at a single location as a function of the tool plunge depth
+	// and the width of cut. We will assume the infinitesimal volume cut by a tool is a parallelopiped
+	// whose dimensions are length * width * depth. This is consistent with how material removal rates
+	// are calculated for milling. For now, we will assume the three dimensions are specified as 
+	// number of voxels.TODO- rewrite this function
+	// so it accepts units of length and convert that into voxels
+
+	dim4 dim(length,width,depth);
+	return constant(1, dim);
 
 }
 
-array maxRV(array x, array y, array y1){
-	// In practice, the y has to be the INVERSE of the tool to calculate the
-	// translational configuration space obstacle - could do conjugate if using
-	// fft but sometimes direct convolution may be faster on the GPU, and
-	// ArrayFire decides whether or not to use the FFT
-	return dilate3(indicator(sublevel_complement(convolve3(x,y,AF_CONV_EXPAND,AF_CONV_AUTO),1)),y1);
-	//return convolve3(x,y,AF_CONV_EXPAND);
-	//return dilate3(x,y1);
-
-
+array reflect(array x){
+	// compute the reflection of the shape, use Hermitian symmetry of DFT 
+	return real(ifft3(conjg(fft3(x))));
 }
+
+
+array maxRV (array x, array y, array infPocket) {
+
+	 // Here x represents the Part, y represents the Tool Assembly, and infPocket represents the toolPlungeVolume at a location
+	return dilate3(indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_EXPAND,AF_CONV_AUTO),1)),infPocket);
+}
+
+
+
 
 
