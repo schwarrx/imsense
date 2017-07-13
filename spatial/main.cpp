@@ -42,11 +42,11 @@ int main(int argc, char *argv[])
 //{
 		//unsigned int cpu_thread_id = omp_get_thread_num();
 		//unsigned int num_cpu_threads = omp_get_num_threads();
-		for (int i = 0; i < ndevices ; i++)
-		{
+		//for (int i = 0; i < ndevices ; i++)
+		//{
 		
 		//setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
-		setDevice(i); 
+		//setDevice(i);
 		//cout << "CPU thread " << cpu_thread_id << " of " << num_cpu_threads << "  uses device " << getDevice() << endl;
 		
 		/////////////// NOTE : WE ARE ASSUMING THE SAME TOOL FOR EVERY ORIENTATION //////////////////
@@ -84,9 +84,9 @@ int main(int argc, char *argv[])
           	cout << "Done computing in  " << af::timer::stop() << " s" <<  endl;
  
 		//}
-		visualize(removalVolumes(span,span,span,2));
+		//visualize(removalVolumes(span,span,span,2));
 
-} 
+//}
 
 
 	} catch (af::exception& e) {
