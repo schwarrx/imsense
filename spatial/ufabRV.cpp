@@ -59,6 +59,7 @@ array maxRV (array x, array y, array infPocket) {
 
 	 // Here x represents the Part, y represents the Tool Assembly, and infPocket represents the toolPlungeVolume at a location
 	return dilate3(indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_EXPAND,AF_CONV_AUTO),1)),infPocket);
+    //return indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_EXPAND,AF_CONV_AUTO),1));
 }
 
 
