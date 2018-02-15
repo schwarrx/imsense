@@ -14,6 +14,7 @@ typedef unsigned char byte;
  
 af::array read_binvox(std::string filespec); 
 void visualize(af::array x);
+void visualize2(af::array x, af::array y);
 
 void writeAFArray(af::array x, std::string filename);
 

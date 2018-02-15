@@ -54,12 +54,20 @@ array reflect(array x){
 	return real(ifft3(conjg(fft3(x))));
 }
 
+array convolveAF(array x, array y, bool correlate){
+    if(correlate){
+        return convolve3(x,reflect(y),AF_CONV_EXPAND ,AF_CONV_AUTO);
+    }
+    else {
+        return convolve3(x,y,AF_CONV_EXPAND , AF_CONV_AUTO);
+    }
+}
 
 array maxRV (array x, array y, array infPocket) {
 
 	 // Here x represents the Part, y represents the Tool Assembly, and infPocket represents the toolPlungeVolume at a location
-	return dilate3(indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_EXPAND,AF_CONV_AUTO),1)),infPocket);
-    //return indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_EXPAND,AF_CONV_AUTO),1));
+	//return dilate3(indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_EXPAND,AF_CONV_AUTO),1)),infPocket);
+    return indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_DEFAULT,AF_CONV_AUTO),1));
 }
 
 

@@ -21,75 +21,66 @@ int main(int argc, char *argv[]) {
     try {
         // Select a device and display arrayfire info
         int device = argc > 1 ? atoi(argv[1]) : 0;
-        af::setDevice(0);
+        af::setDevice(6);
         af::info();
 
         int ndevices = getDeviceCount();
 
         std::cout << "Running tests for 3d removal volumes on " << ndevices - 1
-                << " devices" << std::endl;
-
-        // Find out how many parts can be copied on the gpu at once
-        // allocate memory on the GPU
-        // find out allocated memory on device
-
-        //omp_set_num_threads(ndevices);
-
-        //#pragma omp parallel
-        //{
-        //unsigned int cpu_thread_id = omp_get_thread_num();
-        //unsigned int num_cpu_threads = omp_get_num_threads();
-        //for (int i = 0; i < ndevices ; i++)
-        //{
-
-        //setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
-        //setDevice(i);
-        //cout << "CPU thread " << cpu_thread_id << " of " << num_cpu_threads << "  uses device " << getDevice() << endl;
-
-        /////////////// NOTE : WE ARE ASSUMING THE SAME TOOL FOR EVERY ORIENTATION //////////////////
-
-        // #todo : describe n as a function of available memory
-        int n = 1; // fit 85 tools per gpu
+                << " devices" << std::endl; // GPU 7 on demeter has slightly less memory
 
         // part assembly indicator function
         array part = read_binvox(argv[1]);
         int partDim = part.dims()[0];
-
         //writeAFArray(part, "part.stl");
         //visualize(part);
 
         // tool assembly indicator function
         array toolAssembly = read_binvox(argv[2]);
+
+
         //assume tool assembly voxel resolution is tDim * tDim * tDim
         int tDim = toolAssembly.dims()[0];
-        writeAFArray(toolAssembly, "tool.stl");
 
-        cout << partDim << "," << tDim << endl;
+        int resultDim = partDim + tDim -1;
+        int n = 10; // 10 r-slices can be fit on a GPU
+        array rSlices = array(resultDim, resultDim, resultDim, n);
 
-        // calculate the maximal machinable volume resolution
-        int rvDim = partDim + tDim - 1;
-        //array removalVolumes = array(rvDim, rvDim, rvDim, n);
+        array projectedBoundary= constant(0,resultDim, resultDim,resultDim,f32);
 
-        // set the tool plunge volume as a function of length, width, depth of cut
-        // this will result in an infinitesimal pocket
-        array infPocket = toolPlungeVolume(5, 5, 5); // note - only cube masks supported in arrayfire cuda
+        //omp_set_num_threads(ndevices-1);
 
+        cout << "Part and tool dimensions = "<< partDim << "," << tDim << endl;
         cout << "starting " << endl;
 
-        af::timer::start();
-        //for (int j = 0; j < n; j++){
-        //gfor (seq j,n)
-       // {
-            array removalVolume = maxRV(part, toolAssembly,
-                    infPocket);
-            //maxRV(part, toolAssembly);
-       // }
-        cout << "Done computing in  " << af::timer::stop() << " s" << endl;
+/*
+        #pragma omp parallel
+        {
+        unsigned int cpu_thread_id = omp_get_thread_num();
+        unsigned int num_cpu_threads = omp_get_num_threads();
+*/
 
-        //}
-        //visualize(removalVolumes(span,span,span,0));
-        //visualize(removalVolume);
-        writeAFArray(removalVolume, "removal.stl");
+        af::timer::start();
+
+/*        for (int i = 0; i < ndevices ; i++)
+        {*/
+
+/*        setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
+        setDevice(i);
+        cout << "CPU thread " << cpu_thread_id << " of " << num_cpu_threads << "  uses device " << getDevice() << endl;*/
+        /////////////// NOTE : WE ARE ASSUMING THE SAME TOOL FOR EVERY ORIENTATION //////////////////
+
+        gfor(seq i,n){
+            af::array result = convolveAF(part, toolAssembly, true);
+            rSlices(span,span,span,i) = result;
+            projectedBoundary += result;
+        }
+
+
+/*        }
+        }*/
+        cout << "Done computing in  " << af::timer::stop() << " s" << endl;
+        //visualize(projectedBoundary);
 
 //}
 
@@ -107,3 +98,65 @@ int main(int argc, char *argv[]) {
 #endif
     return 0;
 }
+
+
+/* Older code
+ *
+ *        // calculate the maximal machinable volume resolution
+        int rvDim = partDim + tDim -1 ;
+
+        int w = int(pow(2,ceil(log(rvDim)/log(2)))); // ensure it's a power of 2
+        int h = w; int k = w; // assume (reasonably) that all dimensions in the conv are equal
+        int d = tDim;
+        cout << "rv dimensions = " << w << endl;
+
+        array partExpanded(w,h,k);
+        // copy the part voxels into the expanded array
+        cout << (w-d)/2 << "," << (w-d)/2+ partDim << endl;
+        af::seq seq1((w-d)/2, (w-d)/2+ partDim -1);
+        partExpanded(seq1,seq1,seq1) = part;
+
+        array toolExpanded(rvDim, rvDim, rvDim);
+        af::seq seq2((w-d)/2, (w-d)/2+ tDim -1);
+        toolExpanded(seq2,seq2,seq2) = toolAssembly;
+
+        partExpanded = partExpanded.as(f32);
+        toolExpanded = toolExpanded.as(f32);
+
+
+        //writeAFArray(toolExpanded, "tool.stl");
+        //writeAFArray(partExpanded, "part.stl");
+        //throw std::exception();
+
+        //array partNegative(rvDim, rvDim, rvDim);
+
+
+
+        //}
+        //visualize(removalVolumes(span,span,span,0));
+        //visualize(removalVolume);
+       // writeAFArray(removalVolume, "removal.stl")
+ *
+ *
+ *
+
+
+
+        //array removalVolumes = array(rvDim, rvDim, rvDim, n);
+
+        // set the tool plunge volume as a function of length, width, depth of cut
+        // this will result in an infinitesimal pocket
+        //array infPocket = toolPlungeVolume(5, 5, 5); // note - only cube masks supported in arrayfire cuda
+
+
+
+        //for (int j = 0; j < n; j++){
+        //gfor (seq j,n)
+       // {
+            //array removalVolume = maxRV(partExpanded, toolExpanded,
+                //    infPocket);
+            //maxRV(part, toolAssembly);
+       // }
+        *
+ *
+ */

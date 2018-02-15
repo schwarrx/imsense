@@ -327,3 +327,147 @@ void visualize(array x) {
     iren->Start();
 
 }
+
+
+void visualize2(array x, array y) {
+    // copy data from device to host and visualize on vtk
+    // not sure how to do this visualization directly in AF
+    array x1 = x.as(f64);
+    double *host_x = x1.host<double>(); // copy from device to host - expensive
+
+    array y1 = y.as(f64);
+    double *host_y = y1.host<double>(); // copy from device to host - expensive
+
+
+    dim4 dim = x.dims();
+    dim4 ydim = y.dims();
+
+    //create image data
+    vtkSmartPointer<vtkImageData> imageData =
+            vtkSmartPointer<vtkImageData>::New();
+    //specify size of image data
+    imageData->SetDimensions(dim[0], dim[1], dim[2]);
+#if VTK_MAJOR_VERSION <= 5
+    imageData->SetNumberOfScalarComponents(1);
+    imageData->SetScalarTypeToDouble();
+#else
+    imageData->AllocateScalars(VTK_DOUBLE, 1);
+#endif
+    //populate imageData array
+    cout << "Copying to imageData and visualizing" << endl;
+    for (int k = 0; k < dim[2]; k++) {
+        for (int j = 0; j < dim[1]; j++) {
+            for (int i = 0; i < dim[0]; i++) {
+                double *voxel =
+                        static_cast<double*>(imageData->GetScalarPointer(i, j,
+                                k));
+                voxel[0] = host_x[j * dim[0] * dim[1] + i * dim[1] + k];
+            }
+        }
+    }
+
+    //create image data
+     vtkSmartPointer<vtkImageData> imageData2 =
+             vtkSmartPointer<vtkImageData>::New();
+     //specify size of image data
+     imageData->SetDimensions(ydim[0], ydim[1], ydim[2]);
+ #if VTK_MAJOR_VERSION <= 5
+     imageData2->SetNumberOfScalarComponents(1);
+     imageData2->SetScalarTypeToDouble();
+ #else
+     imageData2->AllocateScalars(VTK_DOUBLE, 1);
+ #endif
+     //populate imageData array
+     cout << "Copying to imageData 2 and visualizing" << endl;
+     for (int k = 0; k < ydim[2]; k++) {
+         for (int j = 0; j < ydim[1]; j++) {
+             for (int i = 0; i < ydim[0]; i++) {
+                 double *voxel =
+                         static_cast<double*>(imageData2->GetScalarPointer(i, j,
+                                 k));
+                 voxel[0] = host_y[j * dim[0] * dim[1] + i * dim[1] + k];
+             }
+         }
+     }
+    // Create a 3D model using marching cubes -- for X
+    vtkSmartPointer<vtkMarchingCubes> mc =
+            vtkSmartPointer<vtkMarchingCubes>::New();
+    mc->SetInputData(imageData);
+    mc->ComputeNormalsOn();
+    mc->ComputeGradientsOn();
+    mc->SetValue(0, 1);  // second value acts as threshold
+
+    // To remain largest region
+    vtkSmartPointer<vtkPolyDataConnectivityFilter> confilter = vtkSmartPointer<
+            vtkPolyDataConnectivityFilter>::New();
+    confilter->SetInputConnection(mc->GetOutputPort());
+    confilter->SetExtractionModeToLargestRegion();
+
+
+    // Create a 3D model using marching cubes
+    vtkSmartPointer<vtkMarchingCubes> mc2 =
+            vtkSmartPointer<vtkMarchingCubes>::New();
+    mc2->SetInputData(imageData2);
+    mc2->ComputeNormalsOn();
+    mc2->ComputeGradientsOn();
+    mc2->SetValue(0, 1);  // second value acts as threshold
+
+    // To remain largest region
+    vtkSmartPointer<vtkPolyDataConnectivityFilter> confilter2 = vtkSmartPointer<
+            vtkPolyDataConnectivityFilter>::New();
+    confilter2->SetInputConnection(mc2->GetOutputPort());
+    confilter2->SetExtractionModeToLargestRegion();
+
+    bool extractMaxIsoSurface = false;
+    // Create a mapper
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<
+            vtkPolyDataMapper>::New();
+    if (extractMaxIsoSurface) {
+        mapper->SetInputConnection(confilter->GetOutputPort());
+    } else {
+        mapper->SetInputConnection(mc->GetOutputPort());
+    }
+
+    mapper->ScalarVisibilityOff();    // utilize actor's property I set
+
+    // Create a mapper
+    vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<
+            vtkPolyDataMapper>::New();
+    if (extractMaxIsoSurface) {
+        mapper2->SetInputConnection(confilter2->GetOutputPort());
+    } else {
+        mapper2->SetInputConnection(mc2->GetOutputPort());
+    }
+
+    mapper->ScalarVisibilityOff();    // utilize actor's property I set
+
+    // Visualize
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->GetProperty()->SetColor(1, 1, 1);
+    actor->SetMapper(mapper);
+
+    // Visualize
+    vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
+    actor2->GetProperty()->SetColor(1, 1, 1);
+    actor2->SetMapper(mapper);
+
+    vtkSmartPointer<vtkRenderWindow> renWin =
+            vtkSmartPointer<vtkRenderWindow>::New();
+    vtkSmartPointer<vtkRenderer> ren1 = vtkSmartPointer<vtkRenderer>::New();
+    ren1->SetBackground(0.1, 0.4, 0.2);
+
+    ren1->AddViewProp(actor);
+    ren1->AddViewProp(actor2);
+    ren1->ResetCamera();
+    renWin->AddRenderer(ren1);
+    renWin->SetSize(301, 300); // intentional odd and NPOT  width/height
+
+    vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<
+            vtkRenderWindowInteractor>::New();
+    iren->SetRenderWindow(renWin);
+
+    renWin->Render(); // make sure we have an OpenGL context.
+    iren->Start();
+
+}
+
