@@ -19,7 +19,6 @@
 #include "ufabRV.h"
 #include "helper.h"
 
-using namespace af;
 using namespace std;
 
 
@@ -41,14 +40,20 @@ int main(int argc, char *argv[]) {
         cout << "done" << endl;
 
         // part assembly indicator function
-        array part = read_binvox(argv[1]);
+        af::array part = read_binvox(argv[1]);
         int partDim = part.dims()[0];
         //writeAFArray(part, "part.stl");
         //visualize(part);
 
         // tool assembly indicator function
         array toolAssembly = read_binvox(argv[2]);
-        //writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated.stl");
+        writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated45.stl");
+        writeAFArray(reorder(toolAssembly, 2, 1, 0), "swapxz.stl");
+        writeAFArray(rotate(reorder(toolAssembly, 2, 1, 0),45, true, AF_INTERP_BICUBIC_SPLINE),"swapxz_rotated45.stl");
+        writeAFArray(reorder(toolAssembly, 0, 2, 1), "swapyz.stl");
+        writeAFArray(rotate(reorder(toolAssembly, 0, 2, 1),45, true, AF_INTERP_BICUBIC_SPLINE),"swapxz_rotated45.stl");
+
+
         //writeAFArray(toolAssembly, "tool.stl");
 
         //assume tool assembly voxel resolution is tDim * tDim * tDim
@@ -57,9 +62,9 @@ int main(int argc, char *argv[]) {
 
         int resultDim = partDim + tDim -1;
         int n = 10; // 10 r-slices can be fit on a GPU
-        array rSlices = array(resultDim, resultDim, resultDim, n);
+        af::array rSlices = array(resultDim, resultDim, resultDim, n);
 
-        array projectedBoundary= constant(0,resultDim, resultDim,resultDim,f32);
+        af::array projectedBoundary= constant(0,resultDim, resultDim,resultDim,f32);
 
         //omp_set_num_threads(ndevices-1);
 

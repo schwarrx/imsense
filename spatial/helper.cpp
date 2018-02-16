@@ -31,13 +31,15 @@
 
 #include <vtkSTLWriter.h>
 
+
+
 using namespace std;
 using namespace af;
 
 std::vector<Eigen::Matrix3d> getRotationMatricesFromFile(const char* file){
 
     // get a vector of Eigen rotation matrices from a quaternion rotation file
-    // Read the rotations file
+    // The rotations file is a list of unit quaternions (e.g. imsense/spatial/rotations/72rotations.dat)
     ifstream rotFile;
     string line;
     rotFile.open(file);
@@ -172,6 +174,22 @@ af::array read_binvox(string filespec) {
     return A;
 
 }
+
+/*af::array rotate(af::array input, Eigen::Matrix3d rotation){
+    // rotate a 3d arrayfire array by an eigen rotation matrix
+    input.eval(); // ensure it is not in use and has been executed
+    input = reorder(input, 2, 1, 0); // swap x and z coordinates.
+    float *d_x = input.device<float>(); // pointer to cuda array
+
+    // 5. Determine ArrayFire's CUDA stream
+       int af_id = af::getDevice();
+       int cuda_id = afcu::getNativeId(af_id);
+       cudaStream_t af_cuda_stream = afcu::getStream(cuda_id);
+
+       increment<<<1, num, 0, af_cuda_stream>>>(d_x);
+
+
+}*/
 
 /*
  __global__ void transform_tex(float *dest, int w, int h, int d,  float x11, float x12, float x13,
