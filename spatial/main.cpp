@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <assert.h>
 #include <omp.h>
+#include <Eigen/Geometry>
+
 
 #include "ufabRV.h"
 #include "helper.h"
@@ -37,10 +39,12 @@ int main(int argc, char *argv[]) {
 
         // tool assembly indicator function
         array toolAssembly = read_binvox(argv[2]);
-
+	writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated.stl");
+	writeAFArray(toolAssembly, "tool.stl");
 
         //assume tool assembly voxel resolution is tDim * tDim * tDim
         int tDim = toolAssembly.dims()[0];
+
 
         int resultDim = partDim + tDim -1;
         int n = 10; // 10 r-slices can be fit on a GPU
@@ -71,7 +75,7 @@ int main(int argc, char *argv[]) {
         /////////////// NOTE : WE ARE ASSUMING THE SAME TOOL FOR EVERY ORIENTATION //////////////////
 
         gfor(seq i,n){
-            af::array result = convolveAF(part, toolAssembly, true);
+            af::array result = convolveAF(part, rotate(toolAssembly,45), true);
             rSlices(span,span,span,i) = result;
             projectedBoundary += result;
         }

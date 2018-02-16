@@ -42,6 +42,13 @@ IF(${ArrayFire_CUDA_FOUND} AND ${CUDA_FOUND})
         ${CMAKE_THREAD_LIBS_INIT} ${CUDA_LIBRARIES} ${NVVM_LIB} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY} ${CUDA_CUFFT_LIBRARIES} )
 ENDIF()
 
+
+SET( EIGEN3_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/Eigen )
+IF( NOT EIGEN3_INCLUDE_DIR )
+    MESSAGE( FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
+ENDIF()
+INCLUDE_DIRECTORIES ( "${EIGEN3_INCLUDE_DIR}" )
+
 # VTK
 find_package(VTK REQUIRED)
 message("Lib[VTK] use file: ${VTK_USE_FILE}")
@@ -49,8 +56,6 @@ message("Lib[VTK] include directory: ${VTK_INCLUDE_DIR}")
 message("Lib[VTK] libraries: ${VTK_LIBRARIES}")
 include(${VTK_USE_FILE})
 target_link_libraries(spatialTests_lib ${VTK_LIBRARIES})
-
-
 target_link_libraries(spatialTests spatialTests_lib)
 
 
