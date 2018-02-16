@@ -11,8 +11,10 @@
 #include <assert.h>
 #include <omp.h>
 #include <Eigen/Geometry>
-
+#include <Eigen/Dense>
 #include <fstream>
+#include <iostream>
+#include <string>
 
 #include "ufabRV.h"
 #include "helper.h"
@@ -49,7 +51,15 @@ int main(int argc, char *argv[]) {
 
     	while (getline (rotFile,line) )
     	{
-      		cout << line << '\n';
+      		//cout << line << '\n';
+		std::istringstream iss(line);
+		string w,x,y,z;
+		iss >> w >> x >> y >> z;
+		double qw = atof(w.c_str());  double qx = atof(x.c_str()); double qy = atof(y.c_str()); double qz =atof(z.c_str());
+		//cout << qw  << "," << qx << "," << qy << "," << qz << endl;
+		Eigen::Quaterniond q(qw,qx,qy,qz);
+		Eigen::Vector3d euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+		std::cout << "Euler from quaternion in roll, pitch, yaw"<< std::endl << euler << std::endl;
     	}
 
 	rotFile.close();
