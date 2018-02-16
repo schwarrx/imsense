@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
         //visualize(part);
 
         // tool assembly indicator function
-        array toolAssembly = read_binvox(argv[2]);
+        af::array toolAssembly = read_binvox(argv[2]);
         writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated45.stl");
         writeAFArray(reorder(toolAssembly, 2, 1, 0), "swapxz.stl");
         writeAFArray(rotate(reorder(toolAssembly, 2, 1, 0),45, true, AF_INTERP_BICUBIC_SPLINE),"swapxz_rotated45.stl");
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 
         int resultDim = partDim + tDim -1;
         int n = 10; // 10 r-slices can be fit on a GPU
-        af::array rSlices = array(resultDim, resultDim, resultDim, n);
+        af::array rSlices = af::array(resultDim, resultDim, resultDim, n);
 
         af::array projectedBoundary= constant(0,resultDim, resultDim,resultDim,f32);
 
