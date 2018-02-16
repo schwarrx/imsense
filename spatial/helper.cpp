@@ -34,6 +34,40 @@
 using namespace std;
 using namespace af;
 
+std::vector<Eigen::Matrix3d> getRotationMatricesFromFile(const char* file){
+
+    // get a vector of Eigen rotation matrices from a quaternion rotation file
+    // Read the rotations file
+    ifstream rotFile;
+    string line;
+    rotFile.open(file);
+    if (!rotFile) {
+        cout << "Unable to open rotation file"<< endl;
+        exit(1); // terminate with error
+    }
+
+    std::vector<Eigen::Matrix3d> rotationMatrices;
+    while (getline (rotFile,line) )
+    {
+        //cout << line << '\n';
+        std::istringstream iss(line);
+        string w,x,y,z;
+        iss >> w >> x >> y >> z;
+        double qw = atof(w.c_str());  double qx = atof(x.c_str()); double qy = atof(y.c_str()); double qz =atof(z.c_str());
+        //cout << qw  << "," << qx << "," << qy << "," << qz << endl;
+        Eigen::Quaterniond q(qw,qx,qy,qz);
+        //Eigen::Vector3d euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+        //std::cout << "Euler from quaternion in roll, pitch, yaw"<< std::endl << euler << std::endl;
+        Eigen::Matrix3d rotationMatrix = q.toRotationMatrix();
+        //std::cout << "The rotation matrix is " << rotationMatrix << endl;
+        rotationMatrices.push_back(rotationMatrix);
+    }
+
+    rotFile.close();
+    return (rotationMatrices);
+
+}
+
 af::array read_binvox(string filespec) {
     // reads a binvox file
     static int version;
@@ -367,28 +401,28 @@ void visualize2(array x, array y) {
     }
 
     //create image data
-     vtkSmartPointer<vtkImageData> imageData2 =
-             vtkSmartPointer<vtkImageData>::New();
-     //specify size of image data
-     imageData->SetDimensions(ydim[0], ydim[1], ydim[2]);
- #if VTK_MAJOR_VERSION <= 5
-     imageData2->SetNumberOfScalarComponents(1);
-     imageData2->SetScalarTypeToDouble();
- #else
-     imageData2->AllocateScalars(VTK_DOUBLE, 1);
- #endif
-     //populate imageData array
-     cout << "Copying to imageData 2 and visualizing" << endl;
-     for (int k = 0; k < ydim[2]; k++) {
-         for (int j = 0; j < ydim[1]; j++) {
-             for (int i = 0; i < ydim[0]; i++) {
-                 double *voxel =
-                         static_cast<double*>(imageData2->GetScalarPointer(i, j,
-                                 k));
-                 voxel[0] = host_y[j * dim[0] * dim[1] + i * dim[1] + k];
-             }
-         }
-     }
+    vtkSmartPointer<vtkImageData> imageData2 =
+            vtkSmartPointer<vtkImageData>::New();
+    //specify size of image data
+    imageData->SetDimensions(ydim[0], ydim[1], ydim[2]);
+#if VTK_MAJOR_VERSION <= 5
+    imageData2->SetNumberOfScalarComponents(1);
+    imageData2->SetScalarTypeToDouble();
+#else
+    imageData2->AllocateScalars(VTK_DOUBLE, 1);
+#endif
+    //populate imageData array
+    cout << "Copying to imageData 2 and visualizing" << endl;
+    for (int k = 0; k < ydim[2]; k++) {
+        for (int j = 0; j < ydim[1]; j++) {
+            for (int i = 0; i < ydim[0]; i++) {
+                double *voxel =
+                        static_cast<double*>(imageData2->GetScalarPointer(i, j,
+                                k));
+                voxel[0] = host_y[j * dim[0] * dim[1] + i * dim[1] + k];
+            }
+        }
+    }
     // Create a 3D model using marching cubes -- for X
     vtkSmartPointer<vtkMarchingCubes> mc =
             vtkSmartPointer<vtkMarchingCubes>::New();

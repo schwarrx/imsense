@@ -27,43 +27,18 @@ using namespace std;
 int main(int argc, char *argv[]) {
     try {
 
-	if(argc !=4 ){
-		cout << "usage: ./spatialTests partFile.binvox toolAssembly.binvox quaternionFile";
-		exit(1);
-	}
+        if(argc !=4 ){
+            cout << "usage: ./spatialTests partFile.binvox toolAssembly.binvox quaternionFile";
+            exit(1);
+        }
         // Select a device and display arrayfire info
         af::setDevice(6);
         af::info();
 
-        int ndevices = getDeviceCount();
-
-        //std::cout << "Running tests for 3d removal volumes on " << ndevices - 1
-               // << " devices" << std::endl; // GPU 7 on demeter has slightly less memory
-
-	// Read the rotations file
-	ifstream rotFile;
-	string line;
-	rotFile.open(argv[3]);
-    	if (!rotFile) {
-        	cout << "Unable to open rotation file"<< endl;
-        	exit(1); // terminate with error
-  	}
-
-    	while (getline (rotFile,line) )
-    	{
-      		//cout << line << '\n';
-		std::istringstream iss(line);
-		string w,x,y,z;
-		iss >> w >> x >> y >> z;
-		double qw = atof(w.c_str());  double qx = atof(x.c_str()); double qy = atof(y.c_str()); double qz =atof(z.c_str());
-		//cout << qw  << "," << qx << "," << qy << "," << qz << endl;
-		Eigen::Quaterniond q(qw,qx,qy,qz);
-		Eigen::Vector3d euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
-		std::cout << "Euler from quaternion in roll, pitch, yaw"<< std::endl << euler << std::endl;
-    	}
-
-	rotFile.close();
-
+        int ndevices = getDeviceCount(); // number of available GPUs
+        cout << "Reading rotation file ..";
+        std::vector<Eigen::Matrix3d> rotationMatrices = getRotationMatricesFromFile(argv[3]);
+        cout << "done" << endl;
 
         // part assembly indicator function
         array part = read_binvox(argv[1]);
@@ -73,8 +48,8 @@ int main(int argc, char *argv[]) {
 
         // tool assembly indicator function
         array toolAssembly = read_binvox(argv[2]);
-	//writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated.stl");
-	//writeAFArray(toolAssembly, "tool.stl");
+        //writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated.stl");
+        //writeAFArray(toolAssembly, "tool.stl");
 
         //assume tool assembly voxel resolution is tDim * tDim * tDim
         int tDim = toolAssembly.dims()[0];
@@ -91,19 +66,19 @@ int main(int argc, char *argv[]) {
         cout << "Part and tool dimensions = "<< partDim << "," << tDim << endl;
         cout << "starting " << endl;
 
-/*
+        /*
         #pragma omp parallel
         {
         unsigned int cpu_thread_id = omp_get_thread_num();
         unsigned int num_cpu_threads = omp_get_num_threads();
-*/
+         */
 
         af::timer::start();
 
-/*        for (int i = 0; i < ndevices ; i++)
+        /*        for (int i = 0; i < ndevices ; i++)
         {*/
 
-/*        setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
+        /*        setDevice(cpu_thread_id % num_cpu_threads); // allows more CPU threads than GPU devices
         setDevice(i);
         cout << "CPU thread " << cpu_thread_id << " of " << num_cpu_threads << "  uses device " << getDevice() << endl;*/
         /////////////// NOTE : WE ARE ASSUMING THE SAME TOOL FOR EVERY ORIENTATION //////////////////
@@ -115,12 +90,12 @@ int main(int argc, char *argv[]) {
         }
 
 
-/*        }
+        /*        }
         }*/
         cout << "Done computing in  " << af::timer::stop() << " s" << endl;
         //visualize(projectedBoundary);
 
-//}
+        //}
 
     } catch (af::exception& e) {
         fprintf(stderr, "%s\n", e.what());
@@ -195,6 +170,6 @@ int main(int argc, char *argv[]) {
                 //    infPocket);
             //maxRV(part, toolAssembly);
        // }
-        *
+ *
  *
  */
