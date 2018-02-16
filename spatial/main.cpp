@@ -12,6 +12,7 @@
 #include <omp.h>
 #include <Eigen/Geometry>
 
+#include <fstream>
 
 #include "ufabRV.h"
 #include "helper.h"
@@ -19,17 +20,40 @@
 using namespace af;
 using namespace std;
 
+
+
 int main(int argc, char *argv[]) {
     try {
+
+	if(argc !=4 ){
+		cout << "usage: ./spatialTests partFile.binvox toolAssembly.binvox quaternionFile";
+		exit(1);
+	}
         // Select a device and display arrayfire info
-        int device = argc > 1 ? atoi(argv[1]) : 0;
         af::setDevice(6);
         af::info();
 
         int ndevices = getDeviceCount();
 
-        std::cout << "Running tests for 3d removal volumes on " << ndevices - 1
-                << " devices" << std::endl; // GPU 7 on demeter has slightly less memory
+        //std::cout << "Running tests for 3d removal volumes on " << ndevices - 1
+               // << " devices" << std::endl; // GPU 7 on demeter has slightly less memory
+
+	// Read the rotations file
+	ifstream rotFile;
+	string line;
+	rotFile.open(argv[3]);
+    	if (!rotFile) {
+        	cout << "Unable to open rotation file"<< endl;
+        	exit(1); // terminate with error
+  	}
+
+    	while (getline (rotFile,line) )
+    	{
+      		cout << line << '\n';
+    	}
+
+	rotFile.close();
+
 
         // part assembly indicator function
         array part = read_binvox(argv[1]);
@@ -39,8 +63,8 @@ int main(int argc, char *argv[]) {
 
         // tool assembly indicator function
         array toolAssembly = read_binvox(argv[2]);
-	writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated.stl");
-	writeAFArray(toolAssembly, "tool.stl");
+	//writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated.stl");
+	//writeAFArray(toolAssembly, "tool.stl");
 
         //assume tool assembly voxel resolution is tDim * tDim * tDim
         int tDim = toolAssembly.dims()[0];
