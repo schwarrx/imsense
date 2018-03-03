@@ -58,6 +58,12 @@ array reflect(array x){
 	return real(ifft3(conjg(fft3(x))));
 }
 
+array reflect2(array x){
+    // compute the reflection of the shape, use Hermitian symmetry of DFT
+    return real(ifft2(conjg(fft2(x))));
+}
+
+
 array convolveAF3(array x, array y, bool correlate){
     if(correlate){
         return convolve3(x,reflect(y),AF_CONV_EXPAND ,AF_CONV_AUTO);
@@ -69,7 +75,7 @@ array convolveAF3(array x, array y, bool correlate){
 
 array convolveAF2(array x, array y, bool correlate){
     if(correlate){
-        return convolve2(x,reflect(y),AF_CONV_EXPAND ,AF_CONV_AUTO);
+        return convolve2(x,reflect2(y),AF_CONV_EXPAND ,AF_CONV_AUTO);
     }
     else {
         return convolve2(x,y,AF_CONV_EXPAND , AF_CONV_AUTO);

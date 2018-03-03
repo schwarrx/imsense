@@ -54,8 +54,7 @@ int main(int argc, char *argv[]) {
         af::timer::start();
 
         //gfor(seq i,n){
-
-        for (int i = 0; i < 1 ; i++){   // how to gfor this?
+        for (int i = 0; i < 360 ; i++){   // how to gfor this?
             // do cross correlation and return all voxels where the overlap field value is less than a measure;
             float epsilon = 35;
             af::array result = (sublevelComplement(convolveAF2(part, rotate(toolAssembly,float(i*360.0/n), true, AF_INTERP_BICUBIC_SPLINE), true),epsilon));
