@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         // Select a device and display arrayfire info
-        af::setDevice(3);
+        af::setDevice(0);
         af::info();
 
         // part assembly indicator function
