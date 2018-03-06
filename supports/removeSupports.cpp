@@ -13,6 +13,23 @@
 const static int width = 512, height = 512;
 af::Window window(width, height, "2D plot example title");
 
+
+void checkInputs(af::array part, af::array tool){
+	// check that the part and tool arrays are valid inputs
+
+	assert(part.numdims() == tool.numdims()); // part and tool must be equi-dimensional
+	int d = part.numdims(); // d-dimensional part
+	assert (d == 2 || d == 3); // handling only 2 and 3-d.
+
+	if (d == 2){
+		assert (part.dims()[0] == part.dims()[1]);
+		assert (tool.dims()[0] == tool.dims()[1]);
+	} else {
+		assert ((part.dims()[0] == part.dims()[1]) && (part.dims()[0] == part.dims()[2]) ) ;
+		assert ((tool.dims()[0] == tool.dims()[1]) && (tool.dims()[0] == tool.dims()[2]) ) ;
+	}
+}
+
 void getRotations(int d){
 	// sample SO(n) -- fill in this code
 
@@ -32,21 +49,20 @@ af::array computeProjectedContactCSpace(af::array part, af::array tool, float ep
 	int toolDim = tool.dims()[0]; // tool image size
 	int resultDim = partDim + toolDim -1; // convolution result size
 
-
 	af::array projectedContactCSpace= constant(0,part.dims()+ tool.dims()-1, f32);
 
 	af::timer::start();
 	//gfor(seq i,n){
 	int n = 20;
-    for (int i = 0; i < n ; i++){   // how to gfor this?
-        // do cross correlation and return all voxels where the overlap field value is less than a measure;
-    	// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on part.numdims()
-        af::array result = (sublevelComplement(
-        		convolveAF2(part, rotate(tool,float(i*360.0/n), true, AF_INTERP_BICUBIC_SPLINE), true)
+	for (int i = 0; i < n ; i++){   // how to gfor this?
+		// do cross correlation and return all voxels where the overlap field value is less than a measure;
+		// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on part.numdims()
+		af::array result = (sublevelComplement(
+				convolveAF2(part, rotate(tool,float(i*360.0/n), true, AF_INTERP_BICUBIC_SPLINE), true)
 				,epsilon));
-        result.as(f32);
-        projectedContactCSpace += result;
-    }
+		result.as(f32);
+		projectedContactCSpace += result;
+	}
 
 	cout << "Done computing projected contact space in  " << af::timer::stop() << " s" << endl;
 	return projectedContactCSpace;
@@ -58,33 +74,22 @@ void removeSupports(af::array part, af::array tool, float epsilon){
 	 * Recursive algorithm to remove supports
 	 */
 
-	cout << "Epsilon = " << epsilon << endl;
-	assert(part.numdims() == tool.numdims()); // part and tool must be equi-dimensional
 	int d = part.numdims(); // d-dimensional part
-
-
-	// Check inputs
-	assert (d == 2 || d == 3); // handling only 2 and 3-d.
-	if (d == 2){
-		assert (part.dims()[0] == part.dims()[1]);
-		assert (tool.dims()[0] == tool.dims()[1]);
-		// Also normalize the images;
+	if (d ==2){
+		// Normalize the images;
 		part /=255.f;  // 3 channel RGB [0-1]
 		tool /=255.f;
-	} else {
-		assert ((part.dims()[0] == part.dims()[1]) && (part.dims()[0] == part.dims()[2]) ) ;
-		assert ((tool.dims()[0] == tool.dims()[1]) && (tool.dims()[0] == tool.dims()[2]) ) ;
 	}
 
 	getRotations(d);
 	af::array piContactCSpace = computeProjectedContactCSpace(part, tool, epsilon);
 
-	if ((d == 2)){
+	/*	if ((d == 2)){
 		do{
-		window.image(piContactCSpace);
+			window.image(piContactCSpace);
 		} while( !window.close() );
 
-	}
+	}*/
 
 
 

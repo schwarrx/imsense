@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
         // epsilon (tolerable overlap measure for contact)
         float epsilon = atof(argv[3]);
 
+        checkInputs(part, tool);
         removeSupports(part, tool, epsilon);
 
     } catch (af::exception& e) {

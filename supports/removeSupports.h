@@ -15,6 +15,7 @@
 using namespace std;
 
 
+void checkInputs(af::array part, af::array tool);
 void getRotations(int n); // sample rotations in SO(n)
 af::array computeProjectedContactCSpace(af::array part, af::array tool, float epsilon); // compute contact space
 
