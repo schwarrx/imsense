@@ -16,18 +16,16 @@
 #include <iostream>
 #include <string>
 
-#include "cspaceMorph.h"
+#include "removeSupports.h"
 #include "helper.h"
 
 using namespace std;
 
-
-
 int main(int argc, char *argv[]) {
     try {
 
-        if(argc !=3 ){
-            cout << "usage: ./removeSupports partFile toolFile" << endl;
+        if(argc !=4  ){
+            cout << "usage: ./removeSupports partFile toolFile epsilon" << endl;
             exit(1);
         }
         // Select a device and display arrayfire info
@@ -36,34 +34,15 @@ int main(int argc, char *argv[]) {
 
         // part assembly indicator function
         af::array part = af::loadImage(argv[1]);
-        int partDim = part.dims()[0];
+
 
         // tool assembly indicator function
-        af::array toolAssembly = af::loadImage(argv[2]);
-        int tDim = toolAssembly.dims()[0];
+        af::array tool = af::loadImage(argv[2]);
 
+        // epsilon (tolerable overlap measure for contact)
+        float epsilon = atof(argv[3]);
 
-        int resultDim = partDim + tDim -1;
-        int n = 10; // 10 r-slices are fit on a GPU
-        af::array projectedBoundary= constant(0,resultDim, resultDim,f32);
-
-        cout << "Part and tool dimensions = "<< partDim << "," << tDim << endl;
-        cout << "starting " << endl;
-
-
-        af::timer::start();
-
-        //gfor(seq i,n){
-        for (int i = 0; i < 360 ; i++){   // how to gfor this?
-            // do cross correlation and return all voxels where the overlap field value is less than a measure;
-            float epsilon = 35;
-            af::array result = (sublevelComplement(convolveAF2(part, rotate(toolAssembly,float(i*360.0/n), true, AF_INTERP_BICUBIC_SPLINE), true),epsilon));
-            result.as(f32);
-            projectedBoundary += result;
-        }
-
-        cout << "Done computing in  " << af::timer::stop() << " s" << endl;
-
+        removeSupports(part, tool, epsilon);
 
     } catch (af::exception& e) {
         fprintf(stderr, "%s\n", e.what());
