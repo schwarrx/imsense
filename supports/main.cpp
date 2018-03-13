@@ -6,15 +6,7 @@
 // Note : use cmake -DArrayFire_DIR=/home/nelaturi/arrayfire ..
 #include <stdio.h>
 #include <arrayfire.h>
-#include <cstdio>
-#include <cstdlib>
 #include <assert.h>
-#include <omp.h>
-#include <Eigen/Geometry>
-#include <Eigen/Dense>
-#include <fstream>
-#include <iostream>
-#include <string>
 
 #include "removeSupports.h"
 #include "helper.h"
@@ -42,8 +34,10 @@ int main(int argc, char *argv[]) {
         // epsilon (tolerable overlap measure for contact)
         float epsilon = atof(argv[3]);
 
+        // Run the support removal algorithm
         checkInputs(part, tool);
-        removeSupports(part, tool, epsilon);
+        std::vector<angleAxis> rotations = getRotations(part.numdims());
+        removeSupports(part, tool, rotations, epsilon);
 
     } catch (af::exception& e) {
         fprintf(stderr, "%s\n", e.what());
