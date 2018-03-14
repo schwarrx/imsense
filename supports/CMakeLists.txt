@@ -17,8 +17,6 @@ file(GLOB SOURCE
 ADD_LIBRARY(removeSupports_lib ${SOURCE})
 ADD_EXECUTABLE(removeSupports main.cpp)
 
-
-set (ENV{ArrayFire_DIR}  "/usr/local/arrayfire")
 # Find the ArrayFire package.
 FIND_PACKAGE(ArrayFire REQUIRED)
 # Include the ArrayFire hreaders
@@ -56,6 +54,44 @@ message("Lib[VTK] include directory: ${VTK_INCLUDE_DIR}")
 message("Lib[VTK] libraries: ${VTK_LIBRARIES}")
 include(${VTK_USE_FILE})
 target_link_libraries(removeSupports_lib ${VTK_LIBRARIES})
+ 
+#CUDA
+find_package(CUDA REQUIRED)
+
+INCLUDE_DIRECTORIES(
+    ${CMAKE_INCLUDE_PATH}
+    ${Boost_INCLUDE_DIR}
+    ${CUDA_INCLUDE_DIRS}
+    "${CMAKE_SOURCE_DIR}/src/backend/cuda"
+    "${CMAKE_CURRENT_BINARY_DIR}"
+    ${CUDA_NVVM_INCLUDE_DIR}
+    )
+
+
+IF(${UNIX})
+    ADD_DEFINITIONS(-Wall -fvisibility=hidden)
+ENDIF()
+
+IF(UNIX)
+  SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fvisibility=hidden)
+  REMOVE_DEFINITIONS(-std=c++0x)
+ELSE()
+  ADD_DEFINITIONS(-DAFDLL)
+ENDIF()
+
+ADD_DEFINITIONS(-DAF_CUDA)
+
+IF(NOT DEFINED CUDA_GENERATE_CODE)
+   SET(CUDA_GENERATE_CODE "arch=compute_${CUDA_COMPUTE_CAPABILITY},code=sm_${CUDA_COMPUTE_CAPABILITY}")
+ENDIF(NOT DEFINED CUDA_GENERATE_CODE)
+
+  SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch compute_${CUDA_COMPUTE_CAPABILITY})
+
+
+target_link_libraries(removeSupports_lib ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES} ${lib_deps} ${CUDA_CUFFT_LIBRARIES} ${CUDA_NVVM_LIBRARIES} ${CUDA_CUDA_LIBRARY}) 
 target_link_libraries(removeSupports removeSupports_lib)
+
+
+
 
 

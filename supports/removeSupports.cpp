@@ -9,9 +9,10 @@
 #include <assert.h>
 #include <iostream>
 #include <fstream>
+#include "helper.h"
 
-const static int width = 512, height = 512;
-af::Window window(width, height, "2D plot example title");
+/*const static int width = 512, height = 512;
+af::Window window(width, height, "2D plot example title");*/
 
 void checkInputs(af::array part, af::array tool) {
 	// check that the part and tool arrays are valid inputs
@@ -31,19 +32,6 @@ void checkInputs(af::array part, af::array tool) {
 				(tool.dims()[0] == tool.dims()[1])
 						&& (tool.dims()[0] == tool.dims()[2]));
 	}
-}
-
-angleAxis convertQtoAngleAxis(Eigen::Quaterniond q){
-	// convert a quaternion to angle axis
-	double angle = 2* acos(q.w());
-	double x = q.x()/sqrt(1- q.w()*q.w());
-	double y = q.y()/sqrt(1- q.w()*q.w());
-	double z = q.z()/sqrt(1- q.w()*q.w());
-	Eigen::Vector3d axis(x,y,z);
-	angleAxis rotation;
-	rotation.angle = angle;
-	rotation.axis = axis;
-	return rotation;
 }
 
 std::vector<angleAxis> getRotations(int d) {
@@ -74,7 +62,6 @@ std::vector<angleAxis> getRotations(int d) {
 		}
 		string line;
 		while (getline(rotationFile, line)) {
-			//cout << line << '\n';
 			std::istringstream iss(line);
 			string w, x, y, z;
 			iss >> w >> x >> y >> z;
@@ -84,7 +71,10 @@ std::vector<angleAxis> getRotations(int d) {
 			double qz = atof(z.c_str());
 			Eigen::Quaterniond q(qw, qx, qy, qz);
 			// convert the quaternion q to angle axis
-			angleAxis rot =convertQtoAngleAxis(q);
+			Eigen::AngleAxisd aa(q);
+			angleAxis rot;
+			rot.angle = aa.angle();
+			rot.axis = aa.axis();
 			rotations.push_back(rot);
 		}
 		break;
@@ -93,7 +83,7 @@ std::vector<angleAxis> getRotations(int d) {
 	return rotations;
 }
 
-af::array computeProjectedContactCSpace(af::array part, af::array tool,
+af::array computeProjectedContactCSpace(af::array part, af::array tool, std::vector<angleAxis> rotations,
 		float epsilon) {
 	/*
 	 * Given a part and a tool in d dimensions, compute the
@@ -111,15 +101,16 @@ af::array computeProjectedContactCSpace(af::array part, af::array tool,
 	af::array projectedContactCSpace = constant(0,
 			part.dims() + tool.dims() - 1, f32);
 
+	int n = static_cast<int>(rotations.size()); //number of rotations
 	af::timer::start();
-	//gfor(seq i,n){
-	int n = 20;
-	for (int i = 0; i < n; i++) {   // how to gfor this?
+	// decide batch size
+
+	gfor(seq i,n){
 		// do cross correlation and return all voxels where the overlap field value is less than a measure;
 		// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on part.numdims()
 		af::array result = (sublevelComplement(
 				convolveAF2(part,
-						rotate(tool, float(i * 360.0 / n), true,
+						rotate(tool, rotations[n].angle, true,
 								AF_INTERP_BICUBIC_SPLINE), true), epsilon));
 		result.as(f32);
 		projectedContactCSpace += result;
@@ -136,23 +127,8 @@ void removeSupports(af::array part, af::array tool,
 	/*
 	 * Recursive algorithm to remove supports
 	 */
-
-	int d = part.numdims(); // d-dimensional part
-	if (d == 2) {
-		// Normalize the images;
-		part /= 255.f;  // 3 channel RGB [0-1]
-		tool /= 255.f;
-	}
-
-	getRotations(d);
-	af::array piContactCSpace = computeProjectedContactCSpace(part, tool,
+	af::array piContactCSpace = computeProjectedContactCSpace(part, tool,rotations,
 			epsilon);
 
-	/*	if ((d == 2)){
-	 do{
-	 window.image(piContactCSpace);
-	 } while( !window.close() );
-
-	 }*/
 
 }

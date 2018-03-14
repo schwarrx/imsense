@@ -123,3 +123,43 @@ af::array read_binvox(string filespec) {
 
 }
 
+void printGPUMemory() {
+	// show memory usage of GPU
+	size_t free_byte;
+	size_t total_byte;
+
+	cudaError_t cuda_status = cudaMemGetInfo(&free_byte, &total_byte);
+
+	if (cudaSuccess != cuda_status) {
+		printf("Error: cudaMemGetInfo fails, %s \n",
+				cudaGetErrorString(cuda_status));
+		exit(1);
+	}
+
+	double free_db = (double) free_byte;
+	double total_db = (double) total_byte;
+	double used_db = total_db - free_db;
+	//af::printMemInfo("af::printMemInfo ");
+	printf("GPU memory usage: used = %f MB, free = %f MB, total = %f MB\n",
+			used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0,
+			total_db / 1024.0 / 1024.0);
+}
+
+double getAvailableDeviceMemory() {
+	// get the available memory on GPU in bytes
+	// show memory usage of GPU
+	size_t free_byte;
+	size_t total_byte;
+
+	cudaError_t cuda_status = cudaMemGetInfo(&free_byte, &total_byte);
+
+	if (cudaSuccess != cuda_status) {
+		printf("Error: cudaMemGetInfo fails, %s \n",
+				cudaGetErrorString(cuda_status));
+		exit(1);
+	}
+	double free_db = static_cast<double>(free_byte);
+	return free_db;
+
+}
+

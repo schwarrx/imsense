@@ -15,7 +15,7 @@
 
 using namespace std;
 
-struct angleAxis{
+struct angleAxis {
 	// Represent rotations in angle axis format
 	// Easier to handle both 2d and 3d this way.
 	// For 3d it is recommended to convert to unit
@@ -26,9 +26,9 @@ struct angleAxis{
 
 void checkInputs(af::array part, af::array tool);
 std::vector<angleAxis> getRotations(int n); // sample rotations in SO(n)
-af::array computeProjectedContactCSpace(af::array part, af::array tool, float epsilon); // compute contact space
-
-void removeSupports(af::array part, af::array tool, std::vector<angleAxis> rotations, float epsilon);
-
+af::array computeProjectedContactCSpace(af::array part, af::array tool,
+		std::vector<angleAxis> rotations, float epsilon); // compute contact space
+void removeSupports(af::array part, af::array tool,
+		std::vector<angleAxis> rotations, float epsilon);
 
 #endif /* REMOVESUPPORTS_H_ */
