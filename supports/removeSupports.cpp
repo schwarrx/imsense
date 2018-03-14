@@ -33,6 +33,19 @@ void checkInputs(af::array part, af::array tool) {
 	}
 }
 
+angleAxis convertQtoAngleAxis(Eigen::Quaterniond q){
+	// convert a quaternion to angle axis
+	double angle = 2* acos(q.w());
+	double x = q.x()/sqrt(1- q.w()*q.w());
+	double y = q.y()/sqrt(1- q.w()*q.w());
+	double z = q.z()/sqrt(1- q.w()*q.w());
+	Eigen::Vector3d axis(x,y,z);
+	angleAxis rotation;
+	rotation.angle = angle;
+	rotation.axis = axis;
+	return rotation;
+}
+
 std::vector<angleAxis> getRotations(int d) {
 	// sample SO(d) -- fill in this code
 	std::vector<angleAxis> rotations;
@@ -71,7 +84,8 @@ std::vector<angleAxis> getRotations(int d) {
 			double qz = atof(z.c_str());
 			Eigen::Quaterniond q(qw, qx, qy, qz);
 			// convert the quaternion q to angle axis
-
+			angleAxis rot =convertQtoAngleAxis(q);
+			rotations.push_back(rot);
 		}
 		break;
 	}
