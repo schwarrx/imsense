@@ -11,8 +11,8 @@
 #include <fstream>
 #include "helper.h"
 
-/*const static int width = 512, height = 512;
-af::Window window(width, height, "2D plot example title");*/
+const static int width = 512, height = 512;
+af::Window window(width, height, "2D plot example title");
 
 void checkInputs(af::array part, af::array tool) {
 	// check that the part and tool arrays are valid inputs
@@ -41,7 +41,7 @@ std::vector<angleAxis> getRotations(int d) {
 	case 2: {
 		cout << "sampling 2d rotations" << endl;
 		// TODO this needs to be refined based on available gpu memory
-		int n = 20; // 20 rotations for now on Sai's machine
+		int n = 90; // evaluate 2d c-scpace at 4 degree increments
 		for (int i = 0; i < n; i++) {
 			angleAxis rot;
 			rot.angle = double(i * 360 / n);
@@ -83,8 +83,54 @@ std::vector<angleAxis> getRotations(int d) {
 	return rotations;
 }
 
-af::array computeProjectedContactCSpace(af::array part, af::array tool, std::vector<angleAxis> rotations,
-		float epsilon) {
+af::array computeEpsilonContactSpace(af::array part, af::array tool,
+		angleAxis rotation, float epsilon) {
+	/*
+	 * Compute the contact space for an oriented tool. Doing this as
+	 * a separate function to avoid memory issues.
+	 */
+	bool correlate = true; // need cross correlation
+	return (sublevelComplement(
+			convolveAF2(part,
+					rotate(tool, rotation.angle, true,
+							AF_INTERP_BICUBIC_SPLINE), correlate), epsilon));
+}
+
+int getBatchSize(int d, int partDim, int toolDim, int resultDim) {
+	/*
+	 * Estimate how many convolutions can fit on the gpu. The set
+	 * of all convolutions that can fit on the gpu is the batch.
+	 */
+	//1. get allocatable memory (in bytes) available on the GPU
+	double mem = getAvailableDeviceMemory();
+	//2. estimate required memory for result and subtract from allocatable memory
+	mem -= (pow(static_cast<double>(resultDim), static_cast<double>(d))
+			* sizeof(f32));
+	//3. estimate memory required for a single convolution
+	// Each convolution needs to hold the part, tool and result on the GPU
+	// TODO this is very inefficient because arrayfire stores the intermediate
+	// convolutions on the GPU and does not go out of scope until the loop
+	// exits. According to arrayfire this to avoid multiple reads and writes
+	// which would result in overall performance degradation.
+	double req = ceil(
+			pow(static_cast<double>(partDim), static_cast<double>(d))
+					* sizeof(f32));
+	// add memory for the tool data separately in case part and tool input sizes differ
+	req += ceil(
+			pow(static_cast<double>(toolDim), static_cast<double>(d))
+					* sizeof(f32));
+	// add memory to store the convolution too (can't seem to delete this on the fly)
+	req += ceil(
+			pow(static_cast<double>(resultDim), static_cast<double>(d))
+					* sizeof(f32));
+	cout << "Available memory (MB) = " << mem / (1024 * 1024)
+			<< " and memory required per batch (MB) = " << req / (1024 * 1024)
+			<< endl;
+	return floor(mem / req); // be conservative
+}
+
+af::array computeProjectedContactCSpace(af::array part, af::array tool,
+		std::vector<angleAxis> rotations, float epsilon) {
 	/*
 	 * Given a part and a tool in d dimensions, compute the
 	 * d* (d+1)/2 dimensional configuration space and extract
@@ -94,26 +140,21 @@ af::array computeProjectedContactCSpace(af::array part, af::array tool, std::vec
 	 * this contact space.
 	 */
 
-	int partDim = part.dims()[0]; // part image size
-	int toolDim = tool.dims()[0]; // tool image size
-	int resultDim = partDim + toolDim - 1; // convolution result size
-
 	af::array projectedContactCSpace = constant(0,
 			part.dims() + tool.dims() - 1, f32);
 
 	int n = static_cast<int>(rotations.size()); //number of rotations
 	af::timer::start();
-	// decide batch size
 
-	gfor(seq i,n){
+	//gfor(seq i,n) {
+	// see https://github.com/arrayfire/arrayfire/issues/1709
+	for (int i = 0; i < n; i++) { // how to gfor this?
 		// do cross correlation and return all voxels where the overlap field value is less than a measure;
 		// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on part.numdims()
-		af::array result = (sublevelComplement(
-				convolveAF2(part,
-						rotate(tool, rotations[n].angle, true,
-								AF_INTERP_BICUBIC_SPLINE), true), epsilon));
-		result.as(f32);
-		projectedContactCSpace += result;
+		projectedContactCSpace += computeEpsilonContactSpace(part, tool,
+				rotations[i], epsilon);
+		af::eval(projectedContactCSpace); // this is required to avoid memory blowup, see github link above
+		//printGPUMemory();
 	}
 
 	cout << "Done computing projected contact space in  " << af::timer::stop()
@@ -127,8 +168,14 @@ void removeSupports(af::array part, af::array tool,
 	/*
 	 * Recursive algorithm to remove supports
 	 */
-	af::array piContactCSpace = computeProjectedContactCSpace(part, tool,rotations,
-			epsilon);
+	af::array piContactCSpace = computeProjectedContactCSpace(part, tool,
+			rotations, epsilon);
 
+	if ((part.numdims() == 2)) {
+		do {
+			window.image(piContactCSpace);
+		} while (!window.close());
+
+	}
 
 }

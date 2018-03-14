@@ -29,8 +29,10 @@ int main(int argc, char *argv[]) {
 
 		// part assembly indicator function
 		af::array part = af::loadImage(argv[1]);
+		part.as(f32);
 		// tool assembly indicator function
 		af::array tool = af::loadImage(argv[2]);
+		tool.as(f32);
 		// epsilon (tolerable overlap measure for contact)
 		float epsilon = atof(argv[3]);
 
