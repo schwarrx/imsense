@@ -88,16 +88,16 @@ std::vector<angleAxis> getRotations(int d) {
 	return rotations;
 }
 
-af::array getDilatedPart(af::array part) {
+af::array getDilatedPart(af::array part, float kernelSize) {
 	// dilate the part -- useful for support intersections
 	int d = part.numdims();
 	af::array dilatedPart;
 
 	if (d == 2) {
-		af::array mask = constant(1, 3, 3);
+		af::array mask = constant(1, kernelSize, kernelSize);
 		dilatedPart = dilate(part, mask);
 	} else {
-		af::array mask = constant(1, 3, 3, 3);
+		af::array mask = constant(1, kernelSize, kernelSize, kernelSize);
 		dilatedPart = dilate3(part, mask);
 	}
 	return dilatedPart;
@@ -148,7 +148,7 @@ af::array getProjectedContactCSpace(af::array nearNet, af::array tool,
 	 */
 
 	af::array projectedContactCSpace = constant(0,
-			nearNet.dims() + tool.dims() - 1, f32);
+			nearNet.dims(), f32);
 
 	int n = static_cast<int>(rotations.size()); //number of rotations
 	//af::timer::start();
@@ -180,35 +180,27 @@ void removeSupports(af::array nearNet, af::array tool, af::array part,
 	// compute the projected contact space
 	af::array piContactCSpace = getProjectedContactCSpace(nearNet, tool,
 			rotations, epsilon);
-	af::array trimmedPiContactCSpace;
-	// truncate this to within bounds of the dilated part
-	int partdim = part.dims()[0];
-	int tooldim = tool.dims()[0];
-	int d = tool.numdims();
-	if (d == 2) {
-		trimmedPiContactCSpace = piContactCSpace(
-				seq(tooldim / 2 -1, tooldim / 2 + partdim ),
-				seq(tooldim / 2 -1, tooldim / 2 + partdim ));
-	} else {
-		trimmedPiContactCSpace = piContactCSpace(
-				seq(tooldim / 2 -1, tooldim / 2 + partdim ),
-				seq(tooldim / 2 -1, tooldim / 2 + partdim ),
-				seq(tooldim / 2 -1, tooldim / 2 + partdim ));
-	}
 
-	// intersect with dilated part
-	cout << trimmedPiContactCSpace.dims() << endl;
-	// now check if res completely covers some dislocation features
+	// now check if the trimmed projection contains some dislocation features
+	// to do this, check the value of the trimmed projection function at the
+	// dislocation features. Then extract the locations where the trimmed
+	// projection function is non-zero, i.e. where there is contact at a
+	// dislocation feature. These are the contact points where the tool can fracture
+	// the part with minimal interference.
+	af::array fracturePointLocations = af::where(
+			piContactCSpace(af::where(dislocations)));
+
+	// now
+
 	//af_print(trimmedPiContactCSpace(dislocations));
 	//af_print(components(dislocations));
 
+	if ((nearNet.numdims() == 2)) {
+		do {
+			window.image(piContactCSpace);
+		} while (!window.close());
 
-	 if ((nearNet.numdims() == 2)) {
-	 do {
-	 window.image(trimmedPiContactCSpace );
-	 } while (!window.close());
-
-	 }
+	}
 }
 
 void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
@@ -224,13 +216,13 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 	std::vector<int> maximallyRemovableSupports; // the output
 
 	af::array supports = (nearNet - part); // the collection of all support structures
-	af::array dilatedPart = getDilatedPart(part);
+	af::array dilatedPart = getDilatedPart(part, epsilon);
 	af::array dislocations = getDislocationFeatures(dilatedPart, supports); // where the supports intersect the part
 	af::array components = getSupportComponents(supports); // labeling all the supports by connected components
 	//af::array componentDislocations = components(af::where(dislocations));
 
 	// run the recursive support removal algo
-	removeSupports(nearNet, tool, part, components,
-			dislocations, sampledRotations, epsilon, maximallyRemovableSupports);
+	removeSupports(nearNet, tool, part, components, dislocations,
+			sampledRotations, epsilon, maximallyRemovableSupports);
 
 }
