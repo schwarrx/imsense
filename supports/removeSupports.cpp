@@ -13,16 +13,18 @@
 const static int width = 512, height = 512;
 af::Window window(width, height, "2D plot example title");
 
-void checkInputs(af::array nearNet, af::array tool) {
+void checkInputs(af::array nearNet, af::array tool, af::array part) {
 	// check that the nearNet and tool arrays are valid inputs
 
 	assert(nearNet.numdims() == tool.numdims()); // nearNet and tool must be equi-dimensional
+	assert(nearNet.numdims() == part.numdims()); // nearNet and part must be equi-dimensional
 	int d = nearNet.numdims(); // d-dimensional nearNet
 	assert(d == 2 || d == 3); // handling only 2 and 3-d.
 
 	if (d == 2) {
 		assert(nearNet.dims()[0] == nearNet.dims()[1]);
 		assert(tool.dims()[0] == tool.dims()[1]);
+		assert(part.dims()[0] == part.dims()[1]);
 	} else {
 		assert(
 				(nearNet.dims()[0] == nearNet.dims()[1])
@@ -30,6 +32,9 @@ void checkInputs(af::array nearNet, af::array tool) {
 		assert(
 				(tool.dims()[0] == tool.dims()[1])
 						&& (tool.dims()[0] == tool.dims()[2]));
+		assert(
+				(part.dims()[0] == part.dims()[1])
+						&& (part.dims()[0] == part.dims()[2]));
 	}
 }
 
@@ -83,19 +88,8 @@ std::vector<angleAxis> getRotations(int d) {
 	return rotations;
 }
 
-void computeDislocationFeatures(af::array nearNet, af::array part) {
-	/*
-	 * Identify all the features of contact between each support and
-	 * the part and store them. These will be needed when computing
-	 * the contact fibers.
-	 */
-	af::array supports = (nearNet - part);
-	//compute connected components -- need to cast input to b8 (binary 8 bit)
-	// connected components will identify each support individually and label them.
-	af::array components = af::regions(supports.as(b8), AF_CONNECTIVITY_4);
-
-	// now find the points of intersection
-	// first dilate the part
+af::array getDilatedPart(af::array part) {
+	// dilate the part -- useful for support intersections
 	int d = part.numdims();
 	af::array dilatedPart;
 
@@ -103,26 +97,36 @@ void computeDislocationFeatures(af::array nearNet, af::array part) {
 		af::array mask = constant(1, 3, 3);
 		dilatedPart = dilate(part, mask);
 	} else {
-		af::array mask = constant(1, 2, 2, 2);
+		af::array mask = constant(1, 3, 3, 3);
 		dilatedPart = dilate3(part, mask);
 	}
-	// intersection is pointwise multiplication
-	af::array dislocationidx = af::where(dilatedPart * supports);
-	af::array labeledDislocations = components(dislocationidx);
-	std::vector<std::pair<int,int> > dislocationMap;
-	gfor(seq i,dislocationidx.dims()[0])
-	{
-		std::pair<int, int> val = std::make_pair(0,0); // change this~
-		dislocationMap.push_back(val);
+	return dilatedPart;
+}
 
-	}
+af::array getSupportComponents(af::array supports) {
+	//get connected components -- need to cast input to b8 (binary 8 bit)
+	// connected components will identify each support individually and label them.
+	af::array components = af::regions(supports.as(b8), AF_CONNECTIVITY_4);
+	return components;
+}
+
+af::array getDislocationFeatures(af::array dilatedPart, af::array supports) {
+	/*
+	 * Identify all the features of contact between each support and
+	 * the part and store them. These will be needed when computing
+	 * the contact fibers.
+	 */
+	// intersection is pointwise multiplication
+	// identify where the dilated part intersects the supports
+	af::array componentDislocations = af::where(dilatedPart * supports);
+	return componentDislocations;
 
 }
 
-af::array computeEpsilonContactSpace(af::array nearNet, af::array tool,
+af::array getEpsilonContactSpace(af::array nearNet, af::array tool,
 		angleAxis rotation, float epsilon) {
 	/*
-	 * Compute the contact space for an oriented tool. Doing this as
+	 * get the contact space for an oriented tool. Doing this as
 	 * a separate function to avoid memory issues.
 	 */
 	bool correlate = true; // need cross correlation
@@ -132,10 +136,10 @@ af::array computeEpsilonContactSpace(af::array nearNet, af::array tool,
 							AF_INTERP_BICUBIC_SPLINE), correlate), epsilon));
 }
 
-af::array computeProjectedContactCSpace(af::array nearNet, af::array tool,
+af::array getProjectedContactCSpace(af::array nearNet, af::array tool,
 		std::vector<angleAxis> rotations, float epsilon) {
 	/*
-	 * Given a nearNet and a tool in d dimensions, compute the
+	 * Given a nearNet and a tool in d dimensions, get the
 	 * d* (d+1)/2 dimensional configuration space and extract
 	 * the contact configurations, by identifying the configurations
 	 * where the overlap measure is less than epsilon. Furthermore
@@ -153,9 +157,10 @@ af::array computeProjectedContactCSpace(af::array nearNet, af::array tool,
 	for (int i = 0; i < n; i++) { // can we gfor this?
 		// do cross correlation and return all voxels where the overlap field value is less than a measure;
 		// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on nearNet.numdims()
-		projectedContactCSpace += computeEpsilonContactSpace(nearNet, tool,
+		projectedContactCSpace += getEpsilonContactSpace(nearNet, tool,
 				rotations[i], epsilon);
 		af::eval(projectedContactCSpace); // this is required to avoid memory blowup, see github link above
+		// TODO -- do above in batches
 		//printGPUMemory();
 	}
 	/*cout << "Done computing projected contact space in  " << af::timer::stop()
@@ -164,19 +169,68 @@ af::array computeProjectedContactCSpace(af::array nearNet, af::array tool,
 
 }
 
-void removeSupports(af::array nearNet, af::array tool,
-		std::vector<angleAxis> rotations, float epsilon) {
+void removeSupports(af::array nearNet, af::array tool, af::array part,
+		af::array components, af::array dislocations,
+		std::vector<angleAxis> rotations, float epsilon, std::vector<int> L) {
 	/*
 	 * Recursive algorithm to remove supports
+	 * L is the 'list' (vector) of maximally removable supports (paper notation)
 	 */
-	af::array piContactCSpace = computeProjectedContactCSpace(nearNet, tool,
-			rotations, epsilon);
 
-	/*	if ((nearNet.numdims() == 2)) {
+	// compute the projected contact space
+	af::array piContactCSpace = getProjectedContactCSpace(nearNet, tool,
+			rotations, epsilon);
+	af::array trimmedPiContactCSpace;
+	// truncate this to within bounds of the dilated part
+	int partdim = part.dims()[0];
+	int tooldim = tool.dims()[0];
+	int d = tool.numdims();
+	if (d == 2) {
+		trimmedPiContactCSpace = piContactCSpace(
+				seq(tooldim / 2 -1, tooldim / 2 + partdim ),
+				seq(tooldim / 2 -1, tooldim / 2 + partdim ));
+	} else {
+		trimmedPiContactCSpace = piContactCSpace(
+				seq(tooldim / 2 -1, tooldim / 2 + partdim ),
+				seq(tooldim / 2 -1, tooldim / 2 + partdim ),
+				seq(tooldim / 2 -1, tooldim / 2 + partdim ));
+	}
+
+	// intersect with dilated part
+	cout << trimmedPiContactCSpace.dims() << endl;
+	// now check if res completely covers some dislocation features
+	//af_print(trimmedPiContactCSpace(dislocations));
+	//af_print(components(dislocations));
+
+
+	 if ((nearNet.numdims() == 2)) {
 	 do {
-	 window.image(piContactCSpace);
+	 window.image(trimmedPiContactCSpace );
 	 } while (!window.close());
 
-	 }*/
+	 }
+}
+
+void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
+		float epsilon) {
+	/*
+	 * Run the support removal algorithm from start to end,
+	 * including input checking and pre-processing
+	 */
+	checkInputs(nearNet, tool, part);
+
+	int problemDimension = nearNet.numdims();
+	std::vector<angleAxis> sampledRotations = getRotations(problemDimension);
+	std::vector<int> maximallyRemovableSupports; // the output
+
+	af::array supports = (nearNet - part); // the collection of all support structures
+	af::array dilatedPart = getDilatedPart(part);
+	af::array dislocations = getDislocationFeatures(dilatedPart, supports); // where the supports intersect the part
+	af::array components = getSupportComponents(supports); // labeling all the supports by connected components
+	//af::array componentDislocations = components(af::where(dislocations));
+
+	// run the recursive support removal algo
+	removeSupports(nearNet, tool, part, components,
+			dislocations, sampledRotations, epsilon, maximallyRemovableSupports);
 
 }

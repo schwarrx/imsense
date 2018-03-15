@@ -51,12 +51,7 @@ int main(int argc, char *argv[]) {
 			part /= 255.f;
 		}
 
-		computeDislocationFeatures(nearNet,part);
-
-		// Run the support removal algorithm
-		checkInputs(nearNet, tool);
-		std::vector<angleAxis> rotations = getRotations(nearNet.numdims());
-		removeSupports(nearNet, tool, rotations, epsilon);
+		runSupportRemoval(nearNet, tool, part, epsilon);
 
 	} catch (af::exception& e) {
 		fprintf(stderr, "%s\n", e.what());
