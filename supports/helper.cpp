@@ -163,3 +163,36 @@ double getAvailableDeviceMemory() {
 
 }
 
+int getBatchSize(int d, int partDim, int toolDim, int resultDim) {
+	/*
+	 * Estimate how many convolutions can fit on the gpu. The set
+	 * of all convolutions that can fit on the gpu is the batch.
+	 */
+	//1. get allocatable memory (in bytes) available on the GPU
+	double mem = getAvailableDeviceMemory();
+	//2. estimate required memory for result and subtract from allocatable memory
+	mem -= (pow(static_cast<double>(resultDim), static_cast<double>(d))
+			* sizeof(f32));
+	//3. estimate memory required for a single convolution
+	// Each convolution needs to hold the part, tool and result on the GPU
+	// TODO this is very inefficient because arrayfire stores the intermediate
+	// convolutions on the GPU and does not go out of scope until the loop
+	// exits. According to arrayfire this to avoid multiple reads and writes
+	// which would result in overall performance degradation.
+	double req = ceil(
+			pow(static_cast<double>(partDim), static_cast<double>(d))
+					* sizeof(f32));
+	// add memory for the tool data separately in case part and tool input sizes differ
+	req += ceil(
+			pow(static_cast<double>(toolDim), static_cast<double>(d))
+					* sizeof(f32));
+	// add memory to store the convolution too (can't seem to delete this on the fly)
+	req += ceil(
+			pow(static_cast<double>(resultDim), static_cast<double>(d))
+					* sizeof(f32));
+	cout << "Available memory (MB) = " << mem / (1024 * 1024)
+			<< " and memory required per batch (MB) = " << req / (1024 * 1024)
+			<< endl;
+	return floor(mem / req); // be conservative
+}
+

@@ -13,11 +13,16 @@
 
 using namespace std;
 
+const static int width = 512, height = 512;
+af::Window window1(width, height, "2D plot example title");
+
 int main(int argc, char *argv[]) {
 	try {
 
-		if (argc != 4) {
-			cout << "usage: ./removeSupports partFile toolFile epsilon" << endl;
+		if (argc != 5) {
+			cout
+					<< "usage: ./removeSupports nearNetFile toolFile partWithoutSupportsFile epsilon "
+					<< endl;
 			exit(1);
 		}
 
@@ -25,28 +30,33 @@ int main(int argc, char *argv[]) {
 		af::setDevice(0);
 		af::info();
 
-
-
-		// part assembly indicator function
-		af::array part = af::loadImage(argv[1]);
-		part.as(f32);
+		// near net shape indicator function
+		af::array nearNet = af::loadImage(argv[1]);
+		nearNet.as(f32);
 		// tool assembly indicator function
 		af::array tool = af::loadImage(argv[2]);
 		tool.as(f32);
-		// epsilon (tolerable overlap measure for contact)
-		float epsilon = atof(argv[3]);
+		// goal part (without supports) indicator function
+		af::array part = af::loadImage(argv[3]);
+		part.as(f32);
 
-		int d = part.numdims(); // d-dimensional part
+		// epsilon (tolerable overlap measure for contact)
+		float epsilon = atof(argv[4]);
+
+		int d = nearNet.numdims(); // d-dimensional part
 		if (d == 2) {
 			// Normalize the images;
-			part /= 255.f;  // 3 channel RGB [0-1]
+			nearNet /= 255.f;  // 3 channel RGB [0-1]
 			tool /= 255.f;
+			part /= 255.f;
 		}
 
+		computeDislocationFeatures(nearNet,part);
+
 		// Run the support removal algorithm
-		checkInputs(part, tool);
-		std::vector<angleAxis> rotations = getRotations(part.numdims());
-		removeSupports(part, tool, rotations, epsilon);
+		checkInputs(nearNet, tool);
+		std::vector<angleAxis> rotations = getRotations(nearNet.numdims());
+		removeSupports(nearNet, tool, rotations, epsilon);
 
 	} catch (af::exception& e) {
 		fprintf(stderr, "%s\n", e.what());

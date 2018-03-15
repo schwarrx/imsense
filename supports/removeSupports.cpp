@@ -14,20 +14,20 @@
 const static int width = 512, height = 512;
 af::Window window(width, height, "2D plot example title");
 
-void checkInputs(af::array part, af::array tool) {
-	// check that the part and tool arrays are valid inputs
+void checkInputs(af::array nearNet, af::array tool) {
+	// check that the nearNet and tool arrays are valid inputs
 
-	assert(part.numdims() == tool.numdims()); // part and tool must be equi-dimensional
-	int d = part.numdims(); // d-dimensional part
+	assert(nearNet.numdims() == tool.numdims()); // nearNet and tool must be equi-dimensional
+	int d = nearNet.numdims(); // d-dimensional nearNet
 	assert(d == 2 || d == 3); // handling only 2 and 3-d.
 
 	if (d == 2) {
-		assert(part.dims()[0] == part.dims()[1]);
+		assert(nearNet.dims()[0] == nearNet.dims()[1]);
 		assert(tool.dims()[0] == tool.dims()[1]);
 	} else {
 		assert(
-				(part.dims()[0] == part.dims()[1])
-						&& (part.dims()[0] == part.dims()[2]));
+				(nearNet.dims()[0] == nearNet.dims()[1])
+						&& (nearNet.dims()[0] == nearNet.dims()[2]));
 		assert(
 				(tool.dims()[0] == tool.dims()[1])
 						&& (tool.dims()[0] == tool.dims()[2]));
@@ -46,6 +46,7 @@ std::vector<angleAxis> getRotations(int d) {
 			angleAxis rot;
 			rot.angle = double(i * 360 / n);
 			rot.axis = Eigen::Vector3d(0, 0, 1); // assume rotation about z
+			// axis is irrelevant for 2d rotations
 			rotations.push_back(rot);
 		}
 		break;
@@ -83,7 +84,41 @@ std::vector<angleAxis> getRotations(int d) {
 	return rotations;
 }
 
-af::array computeEpsilonContactSpace(af::array part, af::array tool,
+
+
+
+void computeDislocationFeatures(af::array nearNet, af::array part){
+	/*
+	 * Identify all the features of contact between each support and
+	 * the part and store them. These will be needed when computing
+	 * the contact fibers.
+	 */
+	af::array supports = (nearNet-part);
+	//compute connected components -- need to cast input to b8 (binary 8 bit)
+	// connected components will identify each support individually and label them.
+	af::array components = af::regions(supports.as(b8),AF_CONNECTIVITY_4);
+
+	// now find the points of intersection
+	// first dilate the part
+	int d = part.numdims();
+	af::array dilatedPart;
+
+	if(d == 2){
+		af::array mask = constant(1, 3, 3);
+		dilatedPart = dilate(part,mask);
+	} else {
+		af::array mask = constant(1, 2, 2,2);
+		dilatedPart = dilate3(part,mask);
+	}
+	// intersection is pointwise multiplication
+	af::array dislocations = dilatedPart * supports;
+	af::array labeledDislocations = components(af::where(dislocations));
+	af_print(labeledDislocations);
+
+
+}
+
+af::array computeEpsilonContactSpace(af::array nearNet, af::array tool,
 		angleAxis rotation, float epsilon) {
 	/*
 	 * Compute the contact space for an oriented tool. Doing this as
@@ -91,48 +126,15 @@ af::array computeEpsilonContactSpace(af::array part, af::array tool,
 	 */
 	bool correlate = true; // need cross correlation
 	return (sublevelComplement(
-			convolveAF2(part,
+			convolveAF2(nearNet,
 					rotate(tool, rotation.angle, true,
 							AF_INTERP_BICUBIC_SPLINE), correlate), epsilon));
 }
 
-int getBatchSize(int d, int partDim, int toolDim, int resultDim) {
-	/*
-	 * Estimate how many convolutions can fit on the gpu. The set
-	 * of all convolutions that can fit on the gpu is the batch.
-	 */
-	//1. get allocatable memory (in bytes) available on the GPU
-	double mem = getAvailableDeviceMemory();
-	//2. estimate required memory for result and subtract from allocatable memory
-	mem -= (pow(static_cast<double>(resultDim), static_cast<double>(d))
-			* sizeof(f32));
-	//3. estimate memory required for a single convolution
-	// Each convolution needs to hold the part, tool and result on the GPU
-	// TODO this is very inefficient because arrayfire stores the intermediate
-	// convolutions on the GPU and does not go out of scope until the loop
-	// exits. According to arrayfire this to avoid multiple reads and writes
-	// which would result in overall performance degradation.
-	double req = ceil(
-			pow(static_cast<double>(partDim), static_cast<double>(d))
-					* sizeof(f32));
-	// add memory for the tool data separately in case part and tool input sizes differ
-	req += ceil(
-			pow(static_cast<double>(toolDim), static_cast<double>(d))
-					* sizeof(f32));
-	// add memory to store the convolution too (can't seem to delete this on the fly)
-	req += ceil(
-			pow(static_cast<double>(resultDim), static_cast<double>(d))
-					* sizeof(f32));
-	cout << "Available memory (MB) = " << mem / (1024 * 1024)
-			<< " and memory required per batch (MB) = " << req / (1024 * 1024)
-			<< endl;
-	return floor(mem / req); // be conservative
-}
-
-af::array computeProjectedContactCSpace(af::array part, af::array tool,
+af::array computeProjectedContactCSpace(af::array nearNet, af::array tool,
 		std::vector<angleAxis> rotations, float epsilon) {
 	/*
-	 * Given a part and a tool in d dimensions, compute the
+	 * Given a nearNet and a tool in d dimensions, compute the
 	 * d* (d+1)/2 dimensional configuration space and extract
 	 * the contact configurations, by identifying the configurations
 	 * where the overlap measure is less than epsilon. Furthermore
@@ -141,41 +143,39 @@ af::array computeProjectedContactCSpace(af::array part, af::array tool,
 	 */
 
 	af::array projectedContactCSpace = constant(0,
-			part.dims() + tool.dims() - 1, f32);
+			nearNet.dims() + tool.dims() - 1, f32);
 
 	int n = static_cast<int>(rotations.size()); //number of rotations
-	af::timer::start();
+	//af::timer::start();
 
-	//gfor(seq i,n) {
 	// see https://github.com/arrayfire/arrayfire/issues/1709
-	for (int i = 0; i < n; i++) { // how to gfor this?
+	for (int i = 0; i < n; i++) { // can we gfor this?
 		// do cross correlation and return all voxels where the overlap field value is less than a measure;
-		// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on part.numdims()
-		projectedContactCSpace += computeEpsilonContactSpace(part, tool,
+		// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on nearNet.numdims()
+		projectedContactCSpace += computeEpsilonContactSpace(nearNet, tool,
 				rotations[i], epsilon);
 		af::eval(projectedContactCSpace); // this is required to avoid memory blowup, see github link above
 		//printGPUMemory();
 	}
-
-	cout << "Done computing projected contact space in  " << af::timer::stop()
-			<< " s" << endl;
+	/*cout << "Done computing projected contact space in  " << af::timer::stop()
+			<< " s" << endl;*/
 	return projectedContactCSpace;
 
 }
 
-void removeSupports(af::array part, af::array tool,
+void removeSupports(af::array nearNet, af::array tool,
 		std::vector<angleAxis> rotations, float epsilon) {
 	/*
 	 * Recursive algorithm to remove supports
 	 */
-	af::array piContactCSpace = computeProjectedContactCSpace(part, tool,
+	af::array piContactCSpace = computeProjectedContactCSpace(nearNet, tool,
 			rotations, epsilon);
 
-	if ((part.numdims() == 2)) {
+/*	if ((nearNet.numdims() == 2)) {
 		do {
 			window.image(piContactCSpace);
 		} while (!window.close());
 
-	}
+	}*/
 
 }

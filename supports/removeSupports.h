@@ -24,11 +24,20 @@ struct angleAxis {
 	Eigen::Vector3d axis;
 };
 
-void checkInputs(af::array part, af::array tool);
+struct dislocationFeature{
+	// Represent the features at which the tool
+	// fractures the part geometry
+	int featureid;
+	// image indices corresponding to feature
+	std::vector<int> indices;
+};
+
+void checkInputs(af::array nearNet, af::array tool);
 std::vector<angleAxis> getRotations(int n); // sample rotations in SO(n)
-af::array computeProjectedContactCSpace(af::array part, af::array tool,
+void computeDislocationFeatures(af::array nearNet, af::array part);
+af::array computeProjectedContactCSpace(af::array nearNet, af::array tool,
 		std::vector<angleAxis> rotations, float epsilon); // compute contact space
-void removeSupports(af::array part, af::array tool,
+void removeSupports(af::array nearNet, af::array tool,
 		std::vector<angleAxis> rotations, float epsilon);
 
 #endif /* REMOVESUPPORTS_H_ */

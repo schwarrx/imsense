@@ -21,6 +21,7 @@ af::array read_binvox(std::string filespec);
 void printGPUMemory();
 
 double getAvailableDeviceMemory();
+int getBatchSize(int d, int partDim, int toolDim, int resultDim);
 
 
 #endif /* HELPER_H_ */
