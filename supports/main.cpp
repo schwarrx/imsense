@@ -13,11 +13,10 @@
 
 using namespace std;
 
-const static int width = 512, height = 512;
-af::Window window1(width, height, "2D plot example title");
 
 int main(int argc, char *argv[]) {
 	try {
+	    cout << "Inputs are ok " << endl;
 
 		if (argc != 5) {
 			cout
