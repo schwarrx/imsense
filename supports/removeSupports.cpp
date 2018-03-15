@@ -10,7 +10,6 @@
 #include <iostream>
 #include <fstream>
 #include "helper.h"
-
 const static int width = 512, height = 512;
 af::Window window(width, height, "2D plot example title");
 
@@ -84,37 +83,39 @@ std::vector<angleAxis> getRotations(int d) {
 	return rotations;
 }
 
-
-
-
-void computeDislocationFeatures(af::array nearNet, af::array part){
+void computeDislocationFeatures(af::array nearNet, af::array part) {
 	/*
 	 * Identify all the features of contact between each support and
 	 * the part and store them. These will be needed when computing
 	 * the contact fibers.
 	 */
-	af::array supports = (nearNet-part);
+	af::array supports = (nearNet - part);
 	//compute connected components -- need to cast input to b8 (binary 8 bit)
 	// connected components will identify each support individually and label them.
-	af::array components = af::regions(supports.as(b8),AF_CONNECTIVITY_4);
+	af::array components = af::regions(supports.as(b8), AF_CONNECTIVITY_4);
 
 	// now find the points of intersection
 	// first dilate the part
 	int d = part.numdims();
 	af::array dilatedPart;
 
-	if(d == 2){
+	if (d == 2) {
 		af::array mask = constant(1, 3, 3);
-		dilatedPart = dilate(part,mask);
+		dilatedPart = dilate(part, mask);
 	} else {
-		af::array mask = constant(1, 2, 2,2);
-		dilatedPart = dilate3(part,mask);
+		af::array mask = constant(1, 2, 2, 2);
+		dilatedPart = dilate3(part, mask);
 	}
 	// intersection is pointwise multiplication
-	af::array dislocations = dilatedPart * supports;
-	af::array labeledDislocations = components(af::where(dislocations));
-	af_print(labeledDislocations);
+	af::array dislocationidx = af::where(dilatedPart * supports);
+	af::array labeledDislocations = components(dislocationidx);
+	std::vector<std::pair<int,int> > dislocationMap;
+	gfor(seq i,dislocationidx.dims()[0])
+	{
+		std::pair<int, int> val = std::make_pair(0,0); // change this~
+		dislocationMap.push_back(val);
 
+	}
 
 }
 
@@ -158,7 +159,7 @@ af::array computeProjectedContactCSpace(af::array nearNet, af::array tool,
 		//printGPUMemory();
 	}
 	/*cout << "Done computing projected contact space in  " << af::timer::stop()
-			<< " s" << endl;*/
+	 << " s" << endl;*/
 	return projectedContactCSpace;
 
 }
@@ -171,11 +172,11 @@ void removeSupports(af::array nearNet, af::array tool,
 	af::array piContactCSpace = computeProjectedContactCSpace(nearNet, tool,
 			rotations, epsilon);
 
-/*	if ((nearNet.numdims() == 2)) {
-		do {
-			window.image(piContactCSpace);
-		} while (!window.close());
+	/*	if ((nearNet.numdims() == 2)) {
+	 do {
+	 window.image(piContactCSpace);
+	 } while (!window.close());
 
-	}*/
+	 }*/
 
 }
