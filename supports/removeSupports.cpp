@@ -10,8 +10,8 @@
 #include <iostream>
 #include <fstream>
 #include "helper.h"
-const static int width = 512, height = 512;
-af::Window window(width, height, "2D plot example title");
+//const static int width = 512, height = 512;
+//af::Window window(width, height, "2D plot example title");
 
 void checkInputs(af::array nearNet, af::array tool, af::array part) {
 	// check that the nearNet and tool arrays are valid inputs
@@ -85,7 +85,7 @@ std::vector<angleAxis> getRotations(int d) {
 		break;
 	}
 	}
-	return rotations;
+	return (rotations);
 }
 
 af::array getDilatedPart(af::array part, float kernelSize) {
@@ -100,14 +100,14 @@ af::array getDilatedPart(af::array part, float kernelSize) {
 		af::array mask = constant(1, kernelSize, kernelSize, kernelSize);
 		dilatedPart = dilate3(part, mask);
 	}
-	return dilatedPart;
+	return (dilatedPart);
 }
 
 af::array getSupportComponents(af::array supports) {
 	//get connected components -- need to cast input to b8 (binary 8 bit)
 	// connected components will identify each support individually and label them.
 	af::array components = af::regions(supports.as(b8), AF_CONNECTIVITY_4);
-	return components;
+	return (components);
 }
 
 af::array getDislocationFeatures(af::array dilatedPart, af::array supports) {
@@ -119,7 +119,7 @@ af::array getDislocationFeatures(af::array dilatedPart, af::array supports) {
 	// intersection is pointwise multiplication
 	// identify where the dilated part intersects the supports
 	af::array componentDislocations = af::where(dilatedPart * supports);
-	return componentDislocations;
+	return (componentDislocations);
 
 }
 
@@ -165,7 +165,7 @@ af::array getProjectedContactCSpace(af::array nearNet, af::array tool,
 	}
 	/*cout << "Done computing projected contact space in  " << af::timer::stop()
 	 << " s" << endl;*/
-	return projectedContactCSpace;
+	return (projectedContactCSpace);
 
 }
 
@@ -195,12 +195,12 @@ void removeSupports(af::array nearNet, af::array tool, af::array part,
 	//af_print(trimmedPiContactCSpace(dislocations));
 	//af_print(components(dislocations));
 
-	if ((nearNet.numdims() == 2)) {
-		do {
-			window.image(piContactCSpace);
-		} while (!window.close());
+//	if ((nearNet.numdims() == 2)) {
+//		do {
+//			window.image(piContactCSpace);
+//		} while (!window.close());
 
-	}
+//	}
 }
 
 void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
@@ -210,6 +210,7 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 	 * including input checking and pre-processing
 	 */
 	checkInputs(nearNet, tool, part);
+
 
 	int problemDimension = nearNet.numdims();
 	std::vector<angleAxis> sampledRotations = getRotations(problemDimension);
