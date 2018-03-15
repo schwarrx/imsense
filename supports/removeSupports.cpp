@@ -177,12 +177,12 @@ void removeSupports(af::array nearNet, af::array tool, af::array part,
 	 * L is the 'list' (vector) of maximally removable supports (paper notation)
 	 */
 
-	// compute the projected contact space
+	// Compute the projected contact space
 	af::array piContactCSpace = getProjectedContactCSpace(nearNet, tool,
 			rotations, epsilon);
 
-	// now check if the trimmed projection contains some dislocation features
-	// to do this, check the value of the trimmed projection function at the
+	// Now check if the trimmed projection contains some dislocation features.
+	// To do this, check the value of the trimmed projection function at the
 	// dislocation features. Then extract the locations where the trimmed
 	// projection function is non-zero, i.e. where there is contact at a
 	// dislocation feature. These are the contact points where the tool can fracture
