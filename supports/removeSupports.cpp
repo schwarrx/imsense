@@ -10,8 +10,8 @@
 #include <iostream>
 #include <fstream>
 #include "helper.h"
-//const static int width = 512, height = 512;
-//af::Window window(width, height, "2D plot example title");
+const static int width = 512, height = 512;
+af::Window window(width, height, "2D plot example title");
 
 void checkInputs(af::array nearNet, af::array tool, af::array part) {
 	// check that the nearNet and tool arrays are valid inputs
@@ -118,7 +118,7 @@ af::array getDislocationFeatures(af::array dilatedPart, af::array supports) {
 	 */
 	// intersection is pointwise multiplication
 	// identify where the dilated part intersects the supports
-	af::array componentDislocations = af::where(dilatedPart * supports);
+	af::array componentDislocations = dilatedPart * supports;
 	return (componentDislocations);
 
 }
@@ -151,7 +151,7 @@ af::array getProjectedContactCSpace(af::array nearNet, af::array tool,
 			nearNet.dims(), f32);
 
 	int n = static_cast<int>(rotations.size()); //number of rotations
-	//af::timer::start();
+	af::timer::start();
 
 	// see https://github.com/arrayfire/arrayfire/issues/1709
 	for (int i = 0; i < n; i++) { // can we gfor this?
@@ -162,9 +162,11 @@ af::array getProjectedContactCSpace(af::array nearNet, af::array tool,
 		af::eval(projectedContactCSpace); // this is required to avoid memory blowup, see github link above
 		// TODO -- do above in batches
 		//printGPUMemory();
+		// periodically do garbage collection .. lame. AF has some bug with non-expanded convolution
+		if(n%10 ==0) af::deviceGC();
 	}
-	/*cout << "Done computing projected contact space in  " << af::timer::stop()
-	 << " s" << endl;*/
+	cout << "Done computing projected contact space in  " << af::timer::stop()
+	 << " s" << endl;
 	return (projectedContactCSpace);
 
 }
@@ -190,17 +192,17 @@ void removeSupports(af::array nearNet, af::array tool, af::array part,
 	af::array fracturePointLocations = af::where(
 			piContactCSpace(af::where(dislocations)));
 
-	// now
+	// now identify which of the supports can be removed
+	//af_print(components(af::where(fracturePointLocations(dislocations))));
 
 	//af_print(trimmedPiContactCSpace(dislocations));
 	//af_print(components(dislocations));
+	if ((nearNet.numdims() == 2)) {
+		do {
+			window.image(piContactCSpace * dislocations);
+		} while (!window.close());
 
-//	if ((nearNet.numdims() == 2)) {
-//		do {
-//			window.image(piContactCSpace);
-//		} while (!window.close());
-
-//	}
+	}
 }
 
 void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
@@ -217,7 +219,8 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 	std::vector<int> maximallyRemovableSupports; // the output
 
 	af::array supports = (nearNet - part); // the collection of all support structures
-	af::array dilatedPart = getDilatedPart(part, epsilon);
+	float dilationKernelSize = 5;
+	af::array dilatedPart = getDilatedPart(part, dilationKernelSize);
 	af::array dislocations = getDislocationFeatures(dilatedPart, supports); // where the supports intersect the part
 	af::array components = getSupportComponents(supports); // labeling all the supports by connected components
 	//af::array componentDislocations = components(af::where(dislocations));

@@ -16,8 +16,6 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 	try {
-	    cout << "Inputs are ok " << endl;
-
 		if (argc != 5) {
 			cout
 					<< "usage: ./removeSupports nearNetFile toolFile partWithoutSupportsFile epsilon "
