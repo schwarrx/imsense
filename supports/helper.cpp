@@ -187,12 +187,86 @@ int getBatchSize(int d, int partDim, int toolDim, int resultDim) {
 			pow(static_cast<double>(toolDim), static_cast<double>(d))
 					* sizeof(f32));
 	// add memory to store the convolution too (can't seem to delete this on the fly)
-	req += ceil(
-			pow(static_cast<double>(resultDim), static_cast<double>(d))
-					* sizeof(f32));
+//	req += ceil(
+//			pow(static_cast<double>(resultDim), static_cast<double>(d))
+//					* sizeof(f32));
 	cout << "Available memory (MB) = " << mem / (1024 * 1024)
 			<< " and memory required per batch (MB) = " << req / (1024 * 1024)
 			<< endl;
 	return floor(mem / req); // be conservative
 }
 
+void checkInputs(af::array nearNet, af::array tool, af::array part) {
+	// check that the nearNet and tool arrays are valid inputs
+
+	assert(nearNet.numdims() == tool.numdims()); // nearNet and tool must be equi-dimensional
+	assert(nearNet.numdims() == part.numdims()); // nearNet and part must be equi-dimensional
+	int d = nearNet.numdims(); // d-dimensional nearNet
+	assert(d == 2 || d == 3); // handling only 2 and 3-d.
+
+	if (d == 2) {
+		assert(nearNet.dims()[0] == nearNet.dims()[1]);
+		assert(tool.dims()[0] == tool.dims()[1]);
+		assert(part.dims()[0] == part.dims()[1]);
+	} else {
+		assert(
+				(nearNet.dims()[0] == nearNet.dims()[1])
+						&& (nearNet.dims()[0] == nearNet.dims()[2]));
+		assert(
+				(tool.dims()[0] == tool.dims()[1])
+						&& (tool.dims()[0] == tool.dims()[2]));
+		assert(
+				(part.dims()[0] == part.dims()[1])
+						&& (part.dims()[0] == part.dims()[2]));
+	}
+}
+
+std::vector<angleAxis> getRotations(int d) {
+	// sample SO(d) -- fill in this code
+	std::vector<angleAxis> rotations;
+	switch (d) {
+	case 2: {
+		cout << "sampling 2d rotations" << endl;
+		// TODO this needs to be refined based on available gpu memory
+		int n = 10; // evaluate 2d c-scpace at 360/n degree increments
+		for (int i = 0; i < n; i++) {
+			angleAxis rot;
+			rot.angle = double(i * 360 / n);
+			rot.axis = Eigen::Vector3d(0, 0, 1); // assume rotation about z
+			// axis is irrelevant for 2d rotations
+			rotations.push_back(rot);
+		}
+		break;
+	}
+	case 3: {
+		cout << "sampling 3d rotations" << endl;
+		// not implemented yet -- use getRotationsFromFile in helper.h
+		ifstream rotationFile;
+		string filename = "576quaternions.dat";
+		rotationFile.open(filename.c_str(), ios::in | ios::binary);
+		if (!rotationFile) {
+			cout << "Unable to open rotation file" << endl;
+			exit(1); // terminate with error
+		}
+		string line;
+		while (getline(rotationFile, line)) {
+			std::istringstream iss(line);
+			string w, x, y, z;
+			iss >> w >> x >> y >> z;
+			double qw = atof(w.c_str());
+			double qx = atof(x.c_str());
+			double qy = atof(y.c_str());
+			double qz = atof(z.c_str());
+			Eigen::Quaterniond q(qw, qx, qy, qz);
+			// convert the quaternion q to angle axis
+			Eigen::AngleAxisd aa(q);
+			angleAxis rot;
+			rot.angle = aa.angle();
+			rot.axis = aa.axis();
+			rotations.push_back(rot);
+		}
+		break;
+	}
+	}
+	return (rotations);
+}

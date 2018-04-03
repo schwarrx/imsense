@@ -10,8 +10,10 @@
 #include "assert.h"
 
 array indicator(array x) {
-	// returns the support of a scalar function x
-	return (x > 0);
+	// returns the support of a scalar function x as an array of floats
+	// needed to force inputs to be indicators for the purposes of
+	// convolution
+	return (x > 0).as(f32);
 }
 
 array sublevel(array x, double measure) {
