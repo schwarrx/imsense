@@ -131,7 +131,7 @@ void removeSupports(af::array nearNet, af::array tool, af::array part,
 
 	if ((nearNet.numdims() == 2)) {
 		do {
-			window.image(dislocations);
+			window.image(accessibleDislocations);
 		} while (!window.close());
 
 	}
