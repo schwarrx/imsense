@@ -228,7 +228,7 @@ std::vector<angleAxis> getRotations(int d) {
 	case 2: {
 		cout << "sampling 2d rotations" << endl;
 		// TODO this needs to be refined based on available gpu memory
-		int n = 10; // evaluate 2d c-scpace at 360/n degree increments
+		int n = 36; // evaluate 2d c-scpace at 360/n degree increments
 		for (int i = 0; i < n; i++) {
 			angleAxis rot;
 			rot.angle = double(i * 360 / n);

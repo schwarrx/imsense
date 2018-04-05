@@ -15,7 +15,6 @@
 
 using namespace std;
 
-
 struct dislocationFeature {
 	// Represent the features at which the tool
 	// fractures the part geometry

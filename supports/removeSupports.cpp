@@ -85,18 +85,21 @@ af::array getProjectedContactCSpace(af::array nearNet, af::array tool,
 
 	// see https://github.com/arrayfire/arrayfire/issues/1709
 	for (int i = 0; i < n; i++) { // can we gfor this?
-		// do cross correlation and return all voxels where the overlap field value is less than a measure;
-		// TODO -- add fancy code to template whether to use convolveAF2 or AF3 depending on nearNet.numdims()
+		// do cross correlation and return all voxels where the overlap
+		// field value is less than a measure;
+		// TODO -- add fancy code to template whether to use
+		// convolveAF2 or AF3 depending on nearNet.numdims()
 		projectedContactCSpace += getEpsilonContactSpace(nearNet, tool,
 				rotations[i], epsilon);
 		//printGPUMemory();
 
 		if (n % batchsize == 0) {
-			af::eval(projectedContactCSpace); // this is required to avoid memory blowup, see github link above
-			// periodically do garbage collection .. lame. AF has some bug with non-expanded convolution
+			// this is required to avoid memory blowup, see github link above
+			af::eval(projectedContactCSpace);
+			// periodically do garbage collection .. lame.
+			// AF has some bug with non-expanded convolution
 			af::deviceGC();
 		}
-
 	}
 	cout << "Done computing projected contact space in  " << af::timer::stop()
 			<< " s" << endl;
@@ -104,44 +107,103 @@ af::array getProjectedContactCSpace(af::array nearNet, af::array tool,
 
 }
 
-void removeSupports(af::array nearNet, af::array tool, af::array part,
-		af::array components, af::array dislocations,
-		std::vector<angleAxis> rotations, float epsilon, std::vector<int> L) {
+void peels(std::vector<std::vector<int> > L, unsigned int nSupports) {
+	if (L.empty()) {
+		cout << "None of the supports are accessible" << endl;
+	} else {
+		if (L.size() != nSupports) {
+			cout
+					<< "Some supports are not reachable"
+					<< endl;
+		} else {
+			cout << "All supports are removable" << endl;
+		}
+		cout << "The peeling sequence for reachable supports is listed below"
+				<< endl;
+		for (auto iter = L.begin(); iter != L.end(); iter++) {
+			auto R = *iter;
+			cout << "< ";
+			for (auto it = R.begin(); it != R.end(); it++) {
+				cout << *it << ",";
+			}
+			cout << " >" << endl;
+		}
+	}
+
+}
+
+double getRerror(af::array a, af::array b, int d) {
+	// This is a way of checking whether two indicator functions are approx equal
+	double error = count(af::where(a - b)).scalar<int>();
+	//cout << "error = " << error << endl;
+	double rerror = error / ((double) pow(a.dims()[0], d)); // relative error
+	//cout << "relative error = " << rerror << endl;
+	return rerror;
+}
+
+std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
+		af::array part, af::array components, af::array dislocations,
+		std::vector<angleAxis> rotations, float epsilon,
+		std::vector<std::vector<int> > L, int nSupports) {
 	/*
 	 * Recursive algorithm to remove supports
 	 * L is the 'list' (vector) of maximally removable supports (paper notation)
 	 */
+
+
+	int d = nearNet.numdims(); // problem dimension
+	double atol = 1e-4; // absolute tolerance for numerical error
+	// base-case
+	if (getRerror(nearNet, part, d) < atol) {
+		peels(L, nSupports); // print
+		return L; // all supports are removed
+	}
 
 	// Compute the projected contact space
 	af::array piContactCSpace = getProjectedContactCSpace(nearNet, tool,
 			rotations, epsilon);
 
 	// Now check if the trimmed projection contains some dislocation features.
-	// To do this, check the value of the trimmed projection function at the
-	// dislocation features. Then extract the locations where the trimmed
-	// projection function is non-zero, i.e. where there is contact at a
-	// dislocation feature. These are the contact points where the tool can fracture
-	// the part with minimal interference.
+	// To do this, check where the trimmed projection function intersects the
+	// dislocation features.
 	af::array accessibleDislocations = piContactCSpace * dislocations;
-	af::array removableSupports =
-			(components(af::where(accessibleDislocations)));
-	af::array supportIndices = (setUnique(removableSupports));
+	af::array removableSupports = setUnique(
+			components(af::where(accessibleDislocations))).as(f32);
+	// each support often has multiple components, make sure they are all removed.
+	int n = removableSupports.dims()[0]; // number of removable supports
+	if (n == 0) {
+		peels(L, nSupports); // print
+		return L;
+	}
+	std::vector<int> R; // all supports removable in this iteration of the recursion
+	for (int i = 0; i < n; i++) {
+		// removableSupports(i) is an array and needs to be converted to a float
+		int supportNum = removableSupports(i).scalar<float>();
+		af::array singleSupport = indicator(components == supportNum);
+		// find the dislocation for this support
+		af::array dislocation = singleSupport * dislocations;
+		// find the accessible dislocation from the C-obstacle
+		af::array accessibleDislocation = singleSupport
+				* accessibleDislocations;
 
-	af_print(removableSupports);
-
-	if ((nearNet.numdims() == 2)) {
-		do {
-			window.image(accessibleDislocations);
-		} while (!window.close());
-
+		if (getRerror(dislocation, accessibleDislocation, d) < atol) {
+			// excellent, the entire support is removable
+			R.push_back(supportNum);
+			nearNet -= singleSupport; // subtract this support from the near-net shape
+		}
 	}
 
-	// now identify which of the supports can be removed
-	//af_print(components(af::where(fracturePointLocations(dislocations))));
 
-	//af_print(trimmedPiContactCSpace(dislocations));
-	//af_print(components(dislocations));
-
+	if (R.empty()) {
+		peels(L, nSupports); // print
+		return L;
+	} else {
+		L.push_back(R);
+		// recurse
+		peels(L, nSupports); // print
+		removeSupports(nearNet, tool, part, components, dislocations, rotations,
+				epsilon, L, nSupports);
+	}
 }
 
 void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
@@ -155,6 +217,13 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 	nearNet = indicator(nearNet);
 	tool = indicator(tool);
 	part = indicator(part);
+//
+//		if ((nearNet.numdims() == 2)) {
+//			do {
+//				window.image(indicator(part));
+//			} while (!window.close());
+//
+//		}
 
 	//af_print(nearNet(af::where(nearNet))); // check that indicators are correctly forced.
 
@@ -162,7 +231,7 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 
 	int problemDimension = nearNet.numdims();
 	std::vector<angleAxis> sampledRotations = getRotations(problemDimension);
-	std::vector<int> maximallyRemovableSupports; // the output
+	std::vector<std::vector<int> > maximallyRemovableSupports; // the output
 
 	af::array supports = (nearNet - part); // the collection of all support structures
 
@@ -170,10 +239,14 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 	af::array dislocations = getDislocationFeatures(
 			getDilatedPart(part, dilationKernelSize), supports); // where the supports intersect the part
 
-	af::array components = getSupportComponents(supports); // labeling all the supports by connected components
-
+	// labeling all the dislocations by connected components
+	af::array components = getSupportComponents(supports);
 	// run the recursive support removal algo
+	int nSupports = max<int>(components);
+	cout << "Number of supports to be removed =" << nSupports << endl;
+
 	removeSupports(nearNet, tool, part, components, dislocations,
-			sampledRotations, epsilon, maximallyRemovableSupports);
+			sampledRotations, epsilon, maximallyRemovableSupports, nSupports);
 
 }
+
