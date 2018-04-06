@@ -9,7 +9,12 @@
 #include <assert.h>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
+#include <set>
+#include <iterator>
+
 #include "helper.h"
+
 const static int width = 512, height = 512;
 af::Window window(width, height, "2D plot example title");
 
@@ -112,9 +117,7 @@ void peels(std::vector<std::vector<int> > L, unsigned int nSupports) {
 		cout << "None of the supports are accessible" << endl;
 	} else {
 		if (L.size() != nSupports) {
-			cout
-					<< "Some supports are not reachable"
-					<< endl;
+			cout << "Some supports are not reachable" << endl;
 		} else {
 			cout << "All supports are removable" << endl;
 		}
@@ -122,11 +125,11 @@ void peels(std::vector<std::vector<int> > L, unsigned int nSupports) {
 				<< endl;
 		for (auto iter = L.begin(); iter != L.end(); iter++) {
 			auto R = *iter;
-			cout << "< ";
+			cout << "<";
 			for (auto it = R.begin(); it != R.end(); it++) {
 				cout << *it << ",";
 			}
-			cout << " >" << endl;
+			cout << '\b' << ">" << endl;
 		}
 	}
 
@@ -135,10 +138,21 @@ void peels(std::vector<std::vector<int> > L, unsigned int nSupports) {
 double getRerror(af::array a, af::array b, int d) {
 	// This is a way of checking whether two indicator functions are approx equal
 	double error = count(af::where(a - b)).scalar<int>();
-	//cout << "error = " << error << endl;
 	double rerror = error / ((double) pow(a.dims()[0], d)); // relative error
-	//cout << "relative error = " << rerror << endl;
 	return rerror;
+}
+
+template<typename T>
+std::vector<T> flatten(const std::vector<std::vector<T>>& v) {
+	// from stack overflow
+	std::size_t total_size = 0;
+	for (const auto& sub : v)
+		total_size += sub.size();
+	std::vector<T> result;
+	result.reserve(total_size);
+	for (const auto& sub : v)
+		result.insert(result.end(), sub.begin(), sub.end());
+	return result;
 }
 
 std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
@@ -147,9 +161,8 @@ std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 		std::vector<std::vector<int> > L, int nSupports) {
 	/*
 	 * Recursive algorithm to remove supports
-	 * L is the 'list' (vector) of maximally removable supports (paper notation)
+	 * L is the vector of maximally removable supports
 	 */
-
 
 	int d = nearNet.numdims(); // problem dimension
 	double atol = 1e-4; // absolute tolerance for numerical error
@@ -169,16 +182,33 @@ std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 	af::array accessibleDislocations = piContactCSpace * dislocations;
 	af::array removableSupports = setUnique(
 			components(af::where(accessibleDislocations))).as(f32);
-	// each support often has multiple components, make sure they are all removed.
 	int n = removableSupports.dims()[0]; // number of removable supports
+
 	if (n == 0) {
 		peels(L, nSupports); // print
 		return L;
 	}
-	std::vector<int> R; // all supports removable in this iteration of the recursion
+
+	// only remove supports unique to this iteration -- there may be crud leftover
+	// from previous support removals, but as long as they are within atol, we assume
+	// some milling finishing operations will take care of it.
+	auto iL = (flatten(L)); // index list of all previously removed supports
+	set<int> sL(iL.begin(), iL.end()); // make iL into a set and remove duplicates
+	// sL is the index set of all supports removed prior to this iteration
+	set<int> iR; // index set of candidate removable supports in this iteration
 	for (int i = 0; i < n; i++) {
+		iR.insert((int) removableSupports(i).scalar<float>());
+	}
+	set<int> U; // uniquely removable supports
+	std::set_difference(iR.begin(), iR.end(), sL.begin(), sL.end(),
+			std::inserter(U, U.end())); // compute iR - iL to get unique suports
+
+	// each support often has multiple components, make sure they are all removed.
+
+	std::vector<int> R; // all supports removable in this iteration of the recursion
+	for (auto iter = U.begin(); iter != U.end(); iter++) {
 		// removableSupports(i) is an array and needs to be converted to a float
-		int supportNum = removableSupports(i).scalar<float>();
+		int supportNum = *iter;
 		af::array singleSupport = indicator(components == supportNum);
 		// find the dislocation for this support
 		af::array dislocation = singleSupport * dislocations;
@@ -190,9 +220,11 @@ std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 			// excellent, the entire support is removable
 			R.push_back(supportNum);
 			nearNet -= singleSupport; // subtract this support from the near-net shape
+			af::eval(nearNet);
+		} else {
+			continue; // not a removable support
 		}
 	}
-
 
 	if (R.empty()) {
 		peels(L, nSupports); // print
@@ -204,6 +236,9 @@ std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 		removeSupports(nearNet, tool, part, components, dislocations, rotations,
 				epsilon, L, nSupports);
 	}
+
+	// avoid C++ warning/error -- control reaches end of non-void function [-Wreturn-type]
+	return L; // code should never get to this
 }
 
 void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
