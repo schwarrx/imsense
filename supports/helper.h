@@ -33,5 +33,6 @@ double getAvailableDeviceMemory();
 int getBatchSize(int d, int partDim, int toolDim, int resultDim);
 void checkInputs(af::array nearNet, af::array tool, af::array part);
 std::vector<angleAxis> getRotations(int d);
+void visualize2D(af::array a);
 
 #endif /* HELPER_H_ */

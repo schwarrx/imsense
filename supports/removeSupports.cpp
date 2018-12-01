@@ -12,11 +12,8 @@
 #include <algorithm>
 #include <set>
 #include <iterator>
-
+#include <iomanip>      // std::setw
 #include "helper.h"
-
-const static int width = 512, height = 512;
-af::Window window(width, height, "2D plot example title");
 
 af::array getDilatedPart(af::array part, float kernelSize) {
 	// dilate the part -- useful for support intersections
@@ -158,7 +155,7 @@ std::vector<T> flatten(const std::vector<std::vector<T>>& v) {
 std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 		af::array part, af::array components, af::array dislocations,
 		std::vector<angleAxis> rotations, float epsilon,
-		std::vector<std::vector<int> > L, int nSupports) {
+		std::vector<std::vector<int> > L, int nSupports, int count) {
 	/*
 	 * Recursive algorithm to remove supports
 	 * L is the vector of maximally removable supports
@@ -176,6 +173,7 @@ std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 	af::array piContactCSpace = getProjectedContactCSpace(nearNet, tool,
 			rotations, epsilon);
 
+	af::eval(piContactCSpace);
 	// Now check if the trimmed projection contains some dislocation features.
 	// To do this, check where the trimmed projection function intersects the
 	// dislocation features.
@@ -204,7 +202,6 @@ std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 			std::inserter(U, U.end())); // compute iR - iL to get unique suports
 
 	// each support often has multiple components, make sure they are all removed.
-
 	std::vector<int> R; // all supports removable in this iteration of the recursion
 	for (auto iter = U.begin(); iter != U.end(); iter++) {
 		// removableSupports(i) is an array and needs to be converted to a float
@@ -225,16 +222,27 @@ std::vector<std::vector<int> > removeSupports(af::array nearNet, af::array tool,
 			continue; // not a removable support
 		}
 	}
+	count += 1;
 
 	if (R.empty()) {
 		peels(L, nSupports); // print
 		return L;
 	} else {
 		L.push_back(R);
+
+//		if (af::isImageIOAvailable()) {
+//			stringstream filename;
+//			filename <<  "nearNet" << std::setw(4) << std::setfill<char>('0') << count
+//					<< ".png" << endl;
+//			string fn = filename.str();
+//			const char* file = fn.c_str();
+//			af::saveImage(file, nearNet);
+//		}
+
+		visualize2D(nearNet);
 		// recurse
-		peels(L, nSupports); // print
 		removeSupports(nearNet, tool, part, components, dislocations, rotations,
-				epsilon, L, nSupports);
+				epsilon, L, nSupports, count);
 	}
 
 	// avoid C++ warning/error -- control reaches end of non-void function [-Wreturn-type]
@@ -252,15 +260,6 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 	nearNet = indicator(nearNet);
 	tool = indicator(tool);
 	part = indicator(part);
-//
-//		if ((nearNet.numdims() == 2)) {
-//			do {
-//				window.image(indicator(part));
-//			} while (!window.close());
-//
-//		}
-
-	//af_print(nearNet(af::where(nearNet))); // check that indicators are correctly forced.
 
 	checkInputs(nearNet, tool, part);
 
@@ -278,10 +277,11 @@ void runSupportRemoval(af::array nearNet, af::array tool, af::array part,
 	af::array components = getSupportComponents(supports);
 	// run the recursive support removal algo
 	int nSupports = max<int>(components);
+	int count = 0; // 0th recursion -- need numbering to save files ..
 	cout << "Number of supports to be removed =" << nSupports << endl;
-
 	removeSupports(nearNet, tool, part, components, dislocations,
-			sampledRotations, epsilon, maximallyRemovableSupports, nSupports);
+			sampledRotations, epsilon, maximallyRemovableSupports, nSupports,
+			count);
 
 }
 

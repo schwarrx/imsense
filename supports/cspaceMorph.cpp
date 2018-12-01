@@ -17,7 +17,7 @@ array indicator(array x) {
 }
 
 array sublevel(array x, double measure) {
-	return (x >= measure - 0.0001);
+	return (x <= measure);
 }
 
 double volume(array x) {

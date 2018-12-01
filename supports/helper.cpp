@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <arrayfire.h>
 #include "helper.h"
+#include "cspaceMorph.h"
 
 using namespace std;
 using namespace af;
@@ -190,9 +191,9 @@ int getBatchSize(int d, int partDim, int toolDim, int resultDim) {
 //	req += ceil(
 //			pow(static_cast<double>(resultDim), static_cast<double>(d))
 //					* sizeof(f32));
-	cout << "Available memory (MB) = " << mem / (1024 * 1024)
-			<< " and memory required per batch (MB) = " << req / (1024 * 1024)
-			<< endl;
+	/*	cout << "Available memory (MB) = " << mem / (1024 * 1024)
+	 << " and memory required per batch (MB) = " << req / (1024 * 1024)
+	 << endl;*/
 	return floor(mem / req); // be conservative
 }
 
@@ -228,7 +229,7 @@ std::vector<angleAxis> getRotations(int d) {
 	case 2: {
 		cout << "sampling 2d rotations" << endl;
 		// TODO this needs to be refined based on available gpu memory
-		int n = 36; // evaluate 2d c-scpace at 360/n degree increments
+		int n = 144; // evaluate 2d c-scpace at 360/n degree increments
 		for (int i = 0; i < n; i++) {
 			angleAxis rot;
 			rot.angle = double(i * 360 / n);
@@ -269,4 +270,15 @@ std::vector<angleAxis> getRotations(int d) {
 	}
 	}
 	return (rotations);
+}
+
+void visualize2D(af::array a) {
+	// visualize a 2d arrayfire array
+	const static int width = 512, height = 512;
+	af::Window window(width, height, "2D plot example title");
+	assert(a.numdims() == 2);
+	do {
+		window.image(indicator(a));
+	} while (!window.close());
+
 }

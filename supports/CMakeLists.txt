@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
-project(removeSupports)
+project(analyzeCSpace)
 
 
 message(";; source directory: ${PROJECT_SOURCE_DIR}")
@@ -14,8 +14,8 @@ file(GLOB SOURCE
 )
 
  
-ADD_LIBRARY(removeSupports_lib ${SOURCE})
-ADD_EXECUTABLE(removeSupports main.cpp)
+ADD_LIBRARY(analyzeCSpace_lib ${SOURCE})
+ADD_EXECUTABLE(analyzeCSpace main.cpp)
 
 # Find the ArrayFire package.
 FIND_PACKAGE(ArrayFire REQUIRED)
@@ -36,7 +36,7 @@ IF(${ArrayFire_CUDA_FOUND} AND ${CUDA_FOUND})
     MESSAGE(STATUS ${CUDA_TOOLKIT_ROOT_DIR})
     MESSAGE(STATUS "ArrayFire CUDA found. Enabling CUDA benchmark")
     
-    TARGET_LINK_LIBRARIES(removeSupports_lib ${ArrayFire_CUDA_LIBRARIES}
+    TARGET_LINK_LIBRARIES(analyzeCSpace_lib ${ArrayFire_CUDA_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT} ${CUDA_LIBRARIES} ${NVVM_LIB} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY} ${CUDA_CUFFT_LIBRARIES} )
 ENDIF()
 
@@ -53,7 +53,7 @@ message("Lib[VTK] use file: ${VTK_USE_FILE}")
 message("Lib[VTK] include directory: ${VTK_INCLUDE_DIR}")
 message("Lib[VTK] libraries: ${VTK_LIBRARIES}")
 include(${VTK_USE_FILE})
-target_link_libraries(removeSupports_lib ${VTK_LIBRARIES})
+target_link_libraries(analyzeCSpace_lib ${VTK_LIBRARIES})
  
 #CUDA
 find_package(CUDA REQUIRED)
@@ -88,8 +88,8 @@ ENDIF(NOT DEFINED CUDA_GENERATE_CODE)
   SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch compute_${CUDA_COMPUTE_CAPABILITY})
 
 
-target_link_libraries(removeSupports_lib ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES} ${lib_deps} ${CUDA_CUFFT_LIBRARIES} ${CUDA_NVVM_LIBRARIES} ${CUDA_CUDA_LIBRARY}) 
-target_link_libraries(removeSupports removeSupports_lib)
+target_link_libraries(analyzeCSpace_lib ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES} ${lib_deps} ${CUDA_CUFFT_LIBRARIES} ${CUDA_NVVM_LIBRARIES} ${CUDA_CUDA_LIBRARY}) 
+target_link_libraries(analyzeCSpace analyzeCSpace_lib)
 
 
 
