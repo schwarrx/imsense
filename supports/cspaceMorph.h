@@ -19,5 +19,7 @@ array sublevelComplement(array x, double measure);
 array convolveAF3(array x, array y, bool correlate);
 array convolveAF2(array x, array y, bool correlate);
 array levelSet(array x, double measure);
+double volume(array x);
+array complement(array x);
 
 #endif /* CSPACEMORPH_H_ */

@@ -13,31 +13,39 @@ array indicator(array x) {
 	// returns the support of a scalar function x as an array of floats
 	// needed to force inputs to be indicators for the purposes of
 	// convolution
-	return (x > 0).as(f32);
+	return (x > 0).as(f64);
 }
 
+
+array complement(array x){
+	// return the complement of the array
+	return ((1-x).as(f64));
+
+}
 array sublevel(array x, double measure) {
-	return (x <= measure);
+	// as defined in the group morphology paper
+	return ((x >= (measure-0.001)).as(f64) );
 }
 
 double volume(array x) {
 	// return number of non-zero elements
 	array c = count(x);
-	return 0;
+	return 0; // FIX THIS!!!!!!!!!
 }
 
 array sublevelComplement(array x, double measure) {
 	// This the complement of the sub-level sets defined in our papers
 	// because we are computing convolution directly with the part, and not with
 	// the part complement
-	return ((x <= measure) && (x >= 1));
+	return (((x <= measure) && (x >= 1)).as(f64));
 }
 
 array levelSet(array x, double measure) {
 	// This the complement of the sub-level sets defined in our papers
 	// because we are computing convolution directly with the part, and not with
 	// the part complement
-	return ((x > measure - 2) && (x < measure + 2));
+	double tol = 1e-5;
+	return ((x >= measure -tol) && (x <= measure + tol));
 }
 
 array reflect3(array x) {

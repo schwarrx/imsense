@@ -16,11 +16,11 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 	try {
-		if ((argc != 4)) {
+		if ((argc != 3)) {
 			cout << "Number of arguments = " << argc << endl;
 			cout << "usage = " << endl;
 			cout
-					<< "maximal set computation: ./analyzeCSpace nearNetFile toolFile  epsilon  \n"
+					<< "maximal set computation: ./analyzeCSpace obstaclesFile toolFile    \n"
 					<< endl;
 			//cout << "support removal ./analyzeCSpace nearNetFile toolFile partWithoutSupportsFile epsilon  \n" << endl;
 			exit(1);
@@ -57,20 +57,18 @@ int main(int argc, char *argv[]) {
 			runSupportRemoval(nearNet, tool, part, epsilon);
 		}
 
-		if (argc == 4) {
+		if (argc == 3) {
 			// COMPUTE MAXIMAL FEASIBLE SET
 			cout << "Computing maximal feasible set" << endl;
 			// physical obstacles indicator function
 			cout << "loading obstacle set " << endl;
 			af::array obstacles = af::loadImage(argv[1]);
-			obstacles.as(f32);
+			obstacles.as(f64);
 			// tool assembly indicator function
 			af::array tool = af::loadImage(argv[2]);
 			cout << "loading tool assembly " << endl;
-			tool.as(f32);
+			tool.as(f64);
 			// epsilon (tolerable overlap measure for contact)
-			float epsilon = atof(argv[3]);
-
 			int d = tool.numdims(); // d-dimensional part
 			cout << "number of dimension = " << d << endl;
 			if (d == 2) {
@@ -80,7 +78,7 @@ int main(int argc, char *argv[]) {
 			}
 			cout << "normalized images" << endl;
 
-			maxFeasibleSet(obstacles, tool, epsilon);
+			maxFeasibleSet(obstacles, tool);
 		}
 
 	} catch (af::exception& e) {

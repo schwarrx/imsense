@@ -278,7 +278,7 @@ void visualize2D(af::array a) {
 	af::Window window(width, height, "2D plot example title");
 	assert(a.numdims() == 2);
 	do {
-		window.image(indicator(a));
+		window.image(a);
 	} while (!window.close());
 
 }
