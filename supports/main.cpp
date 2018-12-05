@@ -16,11 +16,11 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 	try {
-		if ((argc != 3)) {
+		if ((argc != 5)) {
 			cout << "Number of arguments = " << argc << endl;
 			cout << "usage = " << endl;
 			cout
-					<< "maximal set computation: ./analyzeCSpace obstaclesFile toolFile    \n"
+					<< "maximal set computation: ./analyzeCSpace obstaclesFile toolFile envelopeFile envelopeBoundaryFile \n"
 					<< endl;
 			//cout << "support removal ./analyzeCSpace nearNetFile toolFile partWithoutSupportsFile epsilon  \n" << endl;
 			exit(1);
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 		// Select a device and display arrayfire info
 		af::setDevice(0);
 		af::info();
-
+/*
 		if (argc == 5) {
 			// REMOVE SUPPORTS
 			cout << "Support removal" << endl;
@@ -55,9 +55,9 @@ int main(int argc, char *argv[]) {
 			}
 
 			runSupportRemoval(nearNet, tool, part, epsilon);
-		}
+		}*/
 
-		if (argc == 3) {
+		if (argc == 5) {
 			// COMPUTE MAXIMAL FEASIBLE SET
 			cout << "Computing maximal feasible set" << endl;
 			// physical obstacles indicator function
@@ -68,7 +68,17 @@ int main(int argc, char *argv[]) {
 			af::array tool = af::loadImage(argv[2]);
 			cout << "loading tool assembly " << endl;
 			tool.as(f64);
-			// epsilon (tolerable overlap measure for contact)
+			af::array envelope = af::loadImage(argv[3]);
+			cout << "loading envelope " << endl;
+			envelope.as(f64);
+
+			af::array envelopebd = af::loadImage(argv[4]);
+			cout << "loading envelope bd" << endl;
+			envelopebd.as(f64);
+
+			visualize2D(obstacles + envelopebd);
+			af::saveImage("initialConstraints.png", obstacles + envelopebd);
+
 			int d = tool.numdims(); // d-dimensional part
 			cout << "number of dimension = " << d << endl;
 			if (d == 2) {
@@ -78,7 +88,9 @@ int main(int argc, char *argv[]) {
 			}
 			cout << "normalized images" << endl;
 
-			maxFeasibleSet(obstacles, tool);
+
+
+			maxFeasibleSet(obstacles, tool, envelope);
 		}
 
 	} catch (af::exception& e) {
