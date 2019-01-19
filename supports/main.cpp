@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 			af::saveImage("levelset.png", sublevelSet);
 
 
-			writeImages(maxFeas, obstacles, envelope, envelopebd);
+			writeImages(maxFeas, obstacles, envelope, envelopebd,tool);
 		}
 
 	} catch (af::exception& e) {

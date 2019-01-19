@@ -194,7 +194,7 @@ int getBatchSize(int d, int partDim, int toolDim, int resultDim) {
 	/*	cout << "Available memory (MB) = " << mem / (1024 * 1024)
 	 << " and memory required per batch (MB) = " << req / (1024 * 1024)
 	 << endl;*/
-	return floor(mem / req); // be conservative
+	return floor(mem / req)-10; // be conservative
 }
 
 void checkInputs(af::array nearNet, af::array tool, af::array part) {

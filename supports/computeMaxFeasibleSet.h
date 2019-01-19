@@ -21,7 +21,7 @@ using namespace std;
 af::array maxFeasibleSet(af::array obstacles, af::array tool, af::array envelope);
 
 // write images for visualization
-void writeImages(af::array maxFeasible, af::array obstacles, af::array envelope, af::array envelopebd);
+void writeImages(af::array maxFeasible, af::array obstacles, af::array envelope, af::array envelopebd, af::array tool);
 
 
 #endif /* COMPUTEMAXFEASIBLESET_H_ */

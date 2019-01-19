@@ -30,13 +30,12 @@ af::array getMaxFeasibleSetPerOrientation(af::array obstacles, af::array tool,
 			convolveAF2(obstacles,
 					rotate(tool, rotation.angle, true,
 							AF_INTERP_BICUBIC_SPLINE), correlate), level));
-	/*visualize2D((cfree).as(f32) + rotate(tool, rotation.angle, true,
-			AF_INTERP_BICUBIC_SPLINE).as(f32));
-	visualize2D(cfree.as(f32)*obstacles.as(f32));*/
 	return (cfree);
 }
 
 af::array maxFeasibleSet(af::array obstacles, af::array tool, af::array envelope) {
+
+	af::deviceGC();
 
 	// compute the maximal set where each point can be accessed by the tool
 	// (in at least one orientation) without colliding with obstacles.
@@ -63,11 +62,15 @@ af::array maxFeasibleSet(af::array obstacles, af::array tool, af::array envelope
 		// TODO -- add fancy code to template whether to use
 		// convolveAF2 or AF3 depending on nearNet.numdims()
 
-		// IMPORTANT = ASSUME TOOL ORIGIN IS AT IMAGE CENTER!!
+		// IMPORTANT = ASSUME TOOL REFERENCE POINT IS AT IMAGE CENTER!!
 		maxFeasible += getMaxFeasibleSetPerOrientation(obstacles, tool, rotations[i]);
 		//visualize2D(maxFeasible+envelope);
 
+
 		printGPUMemory();
+
+		af::eval(maxFeasible);
+		af::deviceGC();
 
 		if (n % (batchsize/100) == 0) {
 			// this is required to avoid memory blowup, see github link above
@@ -80,25 +83,13 @@ af::array maxFeasibleSet(af::array obstacles, af::array tool, af::array envelope
 	}
 
 	//af_print(maxFeasible);
-	//visualize2D(255.f*sublevel(maxFeasible,15)+255*obstacles.as(f32));
-	// normalize the maxFeasible
-//	maxFeasible /= 255.f;
 	maxFeasible *= envelope; // intersect with the envelope (as a field)
 //
 	return maxFeasible;
-//
-//	maxFeasible += (255*(obstacles).as(f32)); // adding the obstacles for visualization
-//
-//	af::saveImage("maxFeasible_field.png", maxFeasible);
-//
-//	maxFeasible -=(255*(obstacles).as(f32));
-//	maxFeasible = indicator(maxFeasible).as(f32).as(f32);
-//	visualize2D(255*maxFeasible);
-//	af::saveImage("maxFeasible_set.png", maxFeasible);
 
 }
 
-void writeImages(af::array maxFeasible, af::array obstacles, af::array envelope, af::array envelopebd){
+void writeImages(af::array maxFeasible, af::array obstacles, af::array envelope, af::array envelopebd, af::array tool){
 	// write images illustrating the approach (for papers)
 	// first convert everything to floats
 	maxFeasible = maxFeasible.as(f32);
@@ -107,13 +98,14 @@ void writeImages(af::array maxFeasible, af::array obstacles, af::array envelope,
 	envelopebd = envelopebd.as(f32);
 
 	// display the maxFeasible as a field in addition to the obstacles
-	af::saveImage("maxFeasible_field.png", maxFeasible + 255*obstacles);
+	af::saveImage("maxFeasible_field.png", maxFeasible + 255*obstacles );
 
 	// display the maxFeasible set
 	maxFeasible = indicator(maxFeasible).as(f32);
-	af::saveImage("maxFeasible_set.png", maxFeasible);
+	af::saveImage("maxFeasible_set.png", maxFeasible + 255* envelopebd + 255*obstacles);
 
-
+	af::array conv = indicator(sublevel(convolveAF2(maxFeasible, tool, false),0)).as(f32);
+	af::saveImage("tool_sweep.png", conv );
 
 
 }
