@@ -27,6 +27,8 @@
 #include <vtkMatrix4x4.h>
 #include <vtkSTLReader.h>
 #include <vtkAppendPolyData.h>
+#include <vtkOrientationMarkerWidget.h>
+#include <vtkAxesActor.h>
 
 //Eigen
 #include <Eigen/Geometry>
@@ -35,7 +37,6 @@ using namespace std;
 using namespace ompl;
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
-
 
 void visualize(vtkSmartPointer<vtkAppendPolyData> unified) {
 	// Visualize an unordered collection of parts in assembly
@@ -62,8 +63,20 @@ void visualize(vtkSmartPointer<vtkAppendPolyData> unified) {
 	vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<
 			vtkRenderWindowInteractor>::New();
 	iren->SetRenderWindow(renWin);
-	renWin->Render();
 
+	// draw axes
+	vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+	vtkSmartPointer<vtkOrientationMarkerWidget> widget = vtkSmartPointer<
+			vtkOrientationMarkerWidget>::New();
+	widget->SetOutlineColor(0.9300, 0.5700, 0.1300);
+	widget->SetOrientationMarker(axes);
+	widget->SetInteractor(iren);
+	widget->SetEnabled(1);
+	widget->InteractiveOn();
+
+	//render
+	ren->ResetCamera();
+	renWin->Render();
 	iren->Start();
 
 }
@@ -102,13 +115,11 @@ void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
 
 	// initialize the assembled states
 	vtkSmartPointer<vtkAppendPolyData> appendTransformedRobot = vtkSmartPointer<
-	vtkAppendPolyData>::New();
-
+			vtkAppendPolyData>::New();
 
 	// read path and transform states
 	std::ifstream infile("file.txt");
 	std::string line;
-	cout << "PRINTING" << endl;
 	while (std::getline(infile, line)) {
 		std::istringstream iss(line);
 		double x, y, z, qx, qy, qz, qw;
@@ -123,8 +134,6 @@ void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
 		q.w() = qw;
 		q.normalize();
 		Eigen::Matrix3d rot = q.toRotationMatrix();
-		cout << rot << endl;
-		cout << endl;
 
 		const double rowmajor[16] = { rot(0, 0), rot(0, 1), rot(0, 2), x, rot(1,
 				0), rot(1, 1), rot(1, 2), y, rot(2, 0), rot(2, 1), rot(2, 2), z,
@@ -140,11 +149,13 @@ void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
 		transformFilter->SetTransform(transformation);
 		transformFilter->Update();
 
-		appendTransformedRobot->AddInputConnection(transformFilter->GetOutputPort());
+		appendTransformedRobot->AddInputConnection(
+				transformFilter->GetOutputPort());
 
 	}
 	// add the obstacle
-	appendTransformedRobot->AddInputConnection(obstacle_reader->GetOutputPort());
+	appendTransformedRobot->AddInputConnection(
+			obstacle_reader->GetOutputPort());
 
 	visualize(appendTransformedRobot);
 }

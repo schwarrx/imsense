@@ -27,12 +27,14 @@ struct state {
 	double x;
 	double y;
 	double z;
-	// rotation components in axis angle format
-	double axis_x;
-	double axis_y;
-	double axis_z;
-	double angle; // in radians
+	// rotation components as quaternions
+	double qx;
+	double qy;
+	double qz;
+	double qw;
 };
+
+
 
 // solve the motion planning problem
 void findPath(std::string obstacles, std::string robot, state initial,
