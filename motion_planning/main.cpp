@@ -8,41 +8,65 @@
  *     Author: saigopal nelaturi
  */
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include "findpath.h"
+
+using namespace std;
 
 int main(int argc, char *argv[]) {
 
-	if ((argc != 17)) {
+	if ((argc != 4)) {
 		cout << "Number of arguments = " << argc << endl;
 		cout << "usage = " << endl;
-		cout
-				<< "./findPath obstacle robot start(x,y,z,ax,ay,ax,ang) end(x,y,z,ax,ay,az,ang) \n"
-				<< endl;
+		cout << "./findPath obstacle robot goal_states \n" << endl;
 		exit(1);
 	}
 
+	// read the stl files for the obstacle and robot
 	std::string obstacle(argv[1]);
 	std::string robot(argv[2]);
 
-	state initial;
-	initial.x = double(atof(argv[3]));
-	initial.y = double(atof(argv[4]));
-	initial.z = double(atof(argv[5]));
-	initial.qx = double(atof(argv[6]));
-	initial.qy = double(atof(argv[7]));
-	initial.qz = double(atof(argv[8]));
-	initial.qw = double(atof(argv[9]));
+	// read a list of all the goal states ---
+	// we assume that the user will provide a file
+	// that contains a sequence of states,
+	// i.e. the order in which the goal states are specified
+	// matters. Each new line in the file represents a goal
+	// state for the robot which needs to be reached
+	// starting from the state in the previous line. Thus the
+	// first line in the file has to represent the starting
+	// state.
 
-	state final;
-	final.x = double(atof(argv[10]));
-	final.y = double(atof(argv[11]));
-	final.z = double(atof(argv[12]));
-	final.qx = double(atof(argv[13]));
-	final.qy = double(atof(argv[14]));
-	final.qz = double(atof(argv[15]));
-	final.qw = double(atof(argv[16]));
+	// read path and transform states
+	std::ifstream infile(argv[3]);
+	std::string line;
+	cout << "Reading goal states" << endl;
+	// store a vector of all goal states
+	std::vector<state> goal_states;
+	while (std::getline(infile, line)) {
+		std::istringstream iss(line);
+		double x, y, z, qx, qy, qz, qw;
+		if (!(iss >> x >> y >> z >> qx >> qy >> qz >> qw)) {
+			cout << "File error -- check that the goal states are properly specified" << endl;
+			break;
+		} // error
 
-	findPath(obstacle, robot, initial, final);
+		state goal;
+		goal.x = x;
+		goal.y = y;
+		goal.z = z;
+		goal.qx = qx;
+		goal.qy = qy;
+		goal.qz = qz;
+		goal.qw = qw;
+		// push back this state to the vector
+		goal_states.push_back(goal);
+		cout << "." ;
+
+	}
+	cout << endl;
+	findPath(obstacle, robot, goal_states);
 
 	return 0;
 

@@ -11,15 +11,8 @@
 #ifndef PATH_H
 #define PATH_H
 
-#include <vtkSmartPointer.h>
-#include <vtkAppendPolyData.h>
-#include <vtkPolyData.h>
-#include <vtkCleanPolyData.h>
-#include <vtkSTLWriter.h>
-
 #include <iostream>
-#include <omplapp/apps/SE3RigidBodyPlanning.h>
-#include <omplapp/config.h>
+#include <vector>
 
 struct state {
 	// describes a configuration in SE(3)
@@ -34,10 +27,7 @@ struct state {
 	double qw;
 };
 
-
-
 // solve the motion planning problem
-void findPath(std::string obstacles, std::string robot, state initial,
-		state final);
+void findPath(std::string obstacles, std::string robot, std::vector<state> goal_states);
 
 #endif
