@@ -12,7 +12,8 @@
 #include "helper.h"
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/prm/PRM.h>
- #include <omplapp/apps/SE3MultiRigidBodyPlanning.h>
+#include <iterator>
+#include <vector>
 
 using namespace ompl;
 namespace ob = ompl::base;
@@ -23,7 +24,7 @@ void findPath(std::string obstacles, std::string robot,
 
 	// Motion planning for a robot moving in SE(3)
 	// in the presences of physical obstacles
-	app::SE3MultiRigidBodyPlanning setup(goal_states.size());
+	app::SE3MultiRigidBodyPlanning setup(goal_states.size() - 1);
 	setup.setEnvironmentMesh(obstacles.c_str());
 	setup.setRobotMesh(robot.c_str());
 	// collision checker types are FCL and PQP
@@ -46,10 +47,8 @@ void findPath(std::string obstacles, std::string robot,
 	ob::ScopedState<base::CompoundStateSpace> goal(setup.getSpaceInformation());
 
 	for (std::vector<state>::iterator it = goal_states.begin();
-			it != goal_states.end(); ++it) {
+			it != std::prev(goal_states.end()); ++it) {
 
-		cout << std::distance(goal_states.begin(), it) << endl;
-		if (it != goal_states.end()) {
 			auto *start_next = start->as<ob::SE3StateSpace::StateType>(
 					std::distance(goal_states.begin(), it));
 			start_next->setXYZ((*it).x, (*it).y, (*it).z);
@@ -57,17 +56,16 @@ void findPath(std::string obstacles, std::string robot,
 			start_next->rotation().y = (*it).qy;
 			start_next->rotation().z = (*it).qz;
 			start_next->rotation().w = (*it).qw;
-		}
 
-		if (it != goal_states.begin()) {
+
 			auto *goal_next = goal->as<ob::SE3StateSpace::StateType>(
 					std::distance(goal_states.begin(), it));
-			goal_next->setXYZ((*it).x, (*it).y, (*it).z);
-			goal_next->rotation().x = (*it).qx;
-			goal_next->rotation().y = (*it).qy;
-			goal_next->rotation().z = (*it).qz;
-			goal_next->rotation().w = (*it).qw;
-		}
+			std::vector<state>::iterator nxt = std::next(it);
+			goal_next->setXYZ((*nxt).x, (*nxt).y, (*nxt).z);
+			goal_next->rotation().x = (*nxt).qx;
+			goal_next->rotation().y = (*nxt).qy;
+			goal_next->rotation().z = (*nxt).qz;
+			goal_next->rotation().w = (*nxt).qw;
 
 	}
 
@@ -93,5 +91,5 @@ void findPath(std::string obstacles, std::string robot,
 
 	}
 
-	//visualizePath(setup, obstacles, robot);
+	visualizePath(setup, obstacles, robot);
 }

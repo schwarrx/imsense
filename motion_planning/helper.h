@@ -15,7 +15,8 @@
 #include <vtkSTLWriter.h>
 
 #include <omplapp/apps/SE3RigidBodyPlanning.h>
+#include <omplapp/apps/SE3MultiRigidBodyPlanning.h>
 #include <omplapp/config.h>
 
-
-void visualizePath(ompl::app::SE3RigidBodyPlanning setup, std::string obstacles, std::string robot);
+void visualizePath(ompl::app::SE3MultiRigidBodyPlanning setup,
+		std::string obstacles, std::string robot);

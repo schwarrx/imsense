@@ -90,7 +90,7 @@ void stlWrite(string filename, vtkSmartPointer<vtkPolyData> polydata) {
 
 }
 
-void writePath(app::SE3RigidBodyPlanning setup) {
+void writePath(app::SE3MultiRigidBodyPlanning setup) {
 	// writes a path to file.txt
 	std::ofstream out("file.txt");
 	setup.getSolutionPath().printAsMatrix(out);
@@ -103,7 +103,7 @@ vtkSmartPointer<vtkSTLReader> readMesh(std::string filename) {
 	return reader;
 }
 
-void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
+void visualizePath(app::SE3MultiRigidBodyPlanning setup, std::string obstacles,
 		std::string robot) {
 	// first write to path
 	// TODO -- read the states in memory without writing to file
