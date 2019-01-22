@@ -80,7 +80,7 @@ void findPath(std::string obstacles, std::string robot,
 	if (setup.solve(20)) {
 		// simplify & print the solution
 		setup.simplifySolution();
-		int num_states = 8;
+		int num_states = 10;
 		setup.getSolutionPath().interpolate(num_states);
 
 		double length = setup.getSolutionPath().length();
