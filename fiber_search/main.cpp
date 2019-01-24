@@ -12,13 +12,21 @@
 #include <fstream>
 #include <sstream>
 #include "se3graph.h"
+#include "findpath.h"
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
 
+	if ((argc != 4)) {
+		cout << "Number of arguments = " << argc << endl;
+		cout << "usage = " << endl;
+		cout << "./fiberSearch obstacle robot fibers \n" << endl;
+		exit(1);
+	}
+
 	// read path and transform states
-	std::ifstream infile(argv[1]);
+	std::ifstream infile(argv[3]);
 	std::string line;
 	cout << "Reading fibers" << endl;
 
@@ -60,9 +68,40 @@ int main(int argc, char *argv[]) {
 		allfibers.push_back(f);
 	}
 
+	state ref;
+	ref.x = 20.0;
+	ref.y = -30.0;
+	ref.z = 20.0;
+	ref.qx = 0.0;
+	ref.qy = 0.0;
+	ref.qz = 0.0;
+	ref.qw = 1.0;
+
+	vector<state> goal_states;
+	goal_states.push_back(ref);
+
+	cout << "Computing fiber graph" << endl;
 	Graph fibgraph = fiberGraph(allfibers);
-	std::vector<Edge> mst = computeMST(fibgraph);
-	fiberDijkstra(fibgraph);
+	cout << "Solving TSP" << endl;
+	vector<unsigned int> path = solveTSP(fibgraph);
+	cout << "Computing state goals" << endl;
+	computeStateGoals(path, allfibers, ref, goal_states);
+	//goal_states.push_back(ref);
+
+	cout << "Goal states = " << endl;
+	for (auto i = goal_states.begin(); i != goal_states.end(); i++) {
+		state s = (*i);
+		// print state
+		std::cout << s.x << "," << s.y << "," << s.z << "," << s.qx << ","
+				<< s.qy << "," << s.qz << "," << s.qw << std::endl;
+
+	}
+
+	cout << "Starting motion planning" << endl;
+	// read the stl files for the obstacle and robot
+	std::string obstacle(argv[1]);
+	std::string robot(argv[2]);
+	findPath(obstacle, robot, goal_states);
 
 	return 0;
 

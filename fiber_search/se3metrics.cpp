@@ -57,6 +57,20 @@ double RiemannianDistance(state s1, state s2) {
 	return dist;
 }
 
+double stateFiberDistance(state s, fiber f) {
+	// distance from a state to a fiber
+	double mindist = 1e10;
+	for (auto i = f.begin(); i != f.end(); i++) {
+		state s1 = (*i);
+		double dist = RiemannianDistance(s, s1);
+		if (dist < mindist) {
+			mindist = dist;
+		}
+	}
+	return mindist;
+
+}
+
 double fiberDistance(fiber f1, fiber f2) {
 	// compute the shortest distance between two fibers
 	double mindist = 1e10;
@@ -66,7 +80,7 @@ double fiberDistance(fiber f1, fiber f2) {
 			state s1 = (*i);
 			state s2 = (*j);
 
-			double dist = RiemannianDistance(s1,s2);
+			double dist = RiemannianDistance(s1, s2);
 			if (dist < mindist) {
 				mindist = dist;
 
@@ -76,5 +90,28 @@ double fiberDistance(fiber f1, fiber f2) {
 	return mindist;
 }
 
+std::vector<state> closestStates(fiber f1, fiber f2) {
+	// compute the closest states between two fibers
+	state sf1;
+	state sf2;
+	double mindist = 1e10;
+	for (auto i = f1.begin(); i != f1.end(); i++) {
+		for (auto j = f2.begin(); j != f2.end(); j++) {
 
+			state s1 = (*i);
+			state s2 = (*j);
 
+			double dist = RiemannianDistance(s1, s2);
+			if (dist < mindist) {
+				mindist = dist;
+				sf1 = s1;
+				sf2 = s2;
+
+			}
+		}
+	}
+	std::vector<state> closest;
+	closest.push_back(sf1);
+	closest.push_back(sf2);
+	return closest;
+}

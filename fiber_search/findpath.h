@@ -14,18 +14,7 @@
 #include <iostream>
 #include <vector>
 
-struct state {
-	// describes a configuration in SE(3)
-	// translation components
-	double x;
-	double y;
-	double z;
-	// rotation components as quaternions
-	double qx;
-	double qy;
-	double qz;
-	double qw;
-};
+#include "state.h"
 
 // solve the motion planning problem
 void findPath(std::string obstacles, std::string robot, std::vector<state> goal_states);
