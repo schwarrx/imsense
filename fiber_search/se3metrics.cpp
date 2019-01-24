@@ -53,7 +53,7 @@ double RiemannianDistance(state s1, state s2) {
 	Eigen::Matrix4d m1 = state2Matrix(s1);
 	Eigen::Matrix4d m2 = state2Matrix(s2);
 	// Riemannian distance
-	double dist = (m1.inverse() * m2).norm();
+	double dist = (m1.inverse() * m2).log().norm();
 	return dist;
 }
 
