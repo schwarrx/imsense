@@ -75,3 +75,6 @@ double fiberDistance(fiber f1, fiber f2) {
 	}
 	return mindist;
 }
+
+
+

@@ -11,7 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "se3metrics.h"
+#include "se3graph.h"
 
 using namespace std;
 
@@ -57,16 +57,12 @@ int main(int argc, char *argv[]) {
 
 			f.push_back(s);
 		}
-		cout << "Fiber --" << endl;
-		printFiber(f);
-
 		allfibers.push_back(f);
 	}
 
-	// now compute the fiber distance
-	fiber f1 = allfibers[0];
-	fiber f2 = allfibers[2];
-	cout << "Fiber distance = " << fiberDistance(f1,f2) << endl;
+	Graph fibgraph = fiberGraph(allfibers);
+	std::vector<Edge> mst = computeMST(fibgraph);
+	fiberDijkstra(fibgraph);
 
 	return 0;
 
