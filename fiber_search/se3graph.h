@@ -40,6 +40,6 @@ std::vector<Edge> computeMST(Graph g);
 std::vector<unsigned int>  solveTSP(Graph g);
 
 std::vector<state> computeStateGoals(std::vector<unsigned int> path,
-		std::vector<fiber> fibers, state ref, std::vector<state> &goals);
+		std::vector<fiber> fibers,  std::vector<state> &goals);
 
 #endif /* SE3GRAPH_H_ */

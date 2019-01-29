@@ -24,29 +24,7 @@ void printFiber(fiber f) {
 
 }
 
-Eigen::Matrix4d state2Matrix(state s) {
-	// take a state and return the equivalent 4x4 homogeneous transformation matrix
-	Eigen::Matrix4d mat = Eigen::Matrix4d::Zero();
-	// rotation part
-	Eigen::Quaterniond q;
-	q.x() = s.qx;
-	q.y() = s.qy;
-	q.z() = s.qz;
-	q.w() = s.qw;
-	q.normalize();
-	Eigen::Matrix3d rot = q.toRotationMatrix();
-	mat.block<3, 3>(0, 0) = rot;
-	// translation part
-	Eigen::Vector3d t;
-	t[0] = s.x;
-	t[1] = s.y;
-	t[2] = s.z;
-	mat.block<3, 1>(0, 3) = t;
-	// homogeneous
-	mat(3, 3) = 1;
-	return mat;
 
-}
 
 double RiemannianDistance(state s1, state s2) {
 	// compute the Riemannian distance between two states in SE(3)

@@ -91,7 +91,7 @@ std::vector<unsigned int> solveTSP(Graph g) {
 }
 
 std::vector<state> computeStateGoals(vector<unsigned int> path,
-		std::vector<fiber> fibers, state ref, vector<state> &goals) {
+		std::vector<fiber> fibers,  vector<state> &goals) {
 	// Given a path of vertices (fiber sequence) to traverse, and a reference state
 	// compute the sequence of states which need to be traversed
 	// by the tool to avoid collisions (in a greedy way)
