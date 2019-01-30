@@ -63,8 +63,8 @@ Graph fiberGraph(std::vector<fiber> fibers) {
 
 		}
 	}
-	const char* name = "fiber graph ";
-	PrintEdges(g, name);
+	//const char* name = "fiber graph ";
+	//PrintEdges(g, name);
 	return g;
 }
 
@@ -111,17 +111,25 @@ std::vector<state> computeStateGoals(vector<unsigned int> path,
 	for (auto i = num_pairs.begin(); i != std::prev(num_pairs.end()); i++) {
 
 		auto fiberpair = *i;
-		cout << fiberpair.first << "--" << fiberpair.second << endl;
+		if(i == num_pairs.begin()){
+			cout << fiberpair.first << "-->" << fiberpair.second;
+		}
+		else {
+			cout << "-->" << fiberpair.second;
+		}
 
 		std::vector<state> closest = closestStates(fibers[fiberpair.first],
 				fibers[fiberpair.second]);
 
 		goals.insert(goals.end(), closest.begin(), closest.end());
 	}
+	cout << endl;
 
 	return goals;
 
 }
+
+
 
 std::vector<Edge> computeMST(Graph g) {
 	// use Kruskal's algorithm to find the minimal spanning tree

@@ -21,7 +21,7 @@
 void findPathBetweenFibers(std::string obstacles, std::string robot,
 		std::vector<fiber> allfibers);
 
-void findPath(std::string obstacles, std::string robot,
-		std::vector<state> goal_states);
+void findPath(std::string obstacles, std::string robot, state start_state,
+		state goal_state);
 
 #endif

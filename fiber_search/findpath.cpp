@@ -13,6 +13,7 @@
 #include "se3graph.h"
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/prm/PRM.h>
+#include <ompl/geometric/planners/kpiece/LBKPIECE1.h>
 #include <iterator>
 #include <vector>
 
@@ -20,12 +21,13 @@ using namespace ompl;
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
-void findPath(std::string obstacles, std::string robot,
-		std::vector<state> goal_states) {
+
+void findPath(std::string obstacles, std::string robot, state start_state,
+		state goal_state) {
 
 	// Motion planning for a robot moving in SE(3)
 	// in the presences of physical obstacles
-	app::SE3MultiRigidBodyPlanning setup(goal_states.size() - 1);
+	app::SE3RigidBodyPlanning setup;
 	setup.setEnvironmentMesh(obstacles.c_str());
 	setup.setRobotMesh(robot.c_str());
 	// collision checker types are FCL and PQP
@@ -43,31 +45,20 @@ void findPath(std::string obstacles, std::string robot,
 	ob::StateSpacePtr space(new ob::SE3StateSpace);
 
 	// define compound start and goal states
-	ob::ScopedState<base::CompoundStateSpace> start(
-			setup.getSpaceInformation());
-	ob::ScopedState<base::CompoundStateSpace> goal(setup.getSpaceInformation());
+	ob::ScopedState<base::SE3StateSpace> start(setup.getSpaceInformation());
+	ob::ScopedState<base::SE3StateSpace> goal(setup.getSpaceInformation());
 
-	for (auto it = goal_states.begin(); it != std::prev(goal_states.end());
-			++it) {
+	start->setXYZ(start_state.x, start_state.y, start_state.z);
+	start->rotation().x = start_state.qx;
+	start->rotation().y = start_state.qy;
+	start->rotation().z = start_state.qz;
+	start->rotation().w = start_state.qw;
 
-		auto *start_next = start->as<ob::SE3StateSpace::StateType>(
-				std::distance(goal_states.begin(), it));
-		start_next->setXYZ((*it).x, (*it).y, (*it).z);
-		start_next->rotation().x = (*it).qx;
-		start_next->rotation().y = (*it).qy;
-		start_next->rotation().z = (*it).qz;
-		start_next->rotation().w = (*it).qw;
-
-		auto *goal_next = goal->as<ob::SE3StateSpace::StateType>(
-				std::distance(goal_states.begin(), it));
-		std::vector<state>::iterator nxt = std::next(it);
-		goal_next->setXYZ((*nxt).x, (*nxt).y, (*nxt).z);
-		goal_next->rotation().x = (*nxt).qx;
-		goal_next->rotation().y = (*nxt).qy;
-		goal_next->rotation().z = (*nxt).qz;
-		goal_next->rotation().w = (*nxt).qw;
-
-	}
+	goal->setXYZ(goal_state.x, goal_state.y, goal_state.z);
+	goal->rotation().x = goal_state.qx;
+	goal->rotation().y = goal_state.qy;
+	goal->rotation().z = goal_state.qz;
+	goal->rotation().w = goal_state.qw;
 
 	// set start and goal states
 	setup.setStartAndGoalStates(start, goal);
@@ -89,9 +80,10 @@ void findPath(std::string obstacles, std::string robot,
 		setup.getSolutionPath().printAsMatrix(std::cout);
 		// Get all the transformations in the path
 
+		visualizePath(setup, obstacles, robot);
+
 	}
 
-	visualizePath(setup, obstacles, robot);
 }
 
 void findPathBetweenFibers(std::string obstacles, std::string robot,
@@ -105,7 +97,7 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 	cout << "Solving TSP" << endl;
 	std::vector<unsigned int> path = solveTSP(fibgraph);
 
-	cout << "Computing state goals" << endl;
+	cout << "Computing goal states for fiber path ";
 	computeStateGoals(path, allfibers, goal_states);
 
 	std::vector<state> uniqueGoals;
@@ -130,6 +122,24 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 
 	cout << "Starting motion planning" << endl;
 	// read the stl files for the obstacle and robot
-	findPath(obstacles, robot, uniqueGoals);
+
+	// make pairs from the path
+		std::vector<std::pair<state, state>> state_pairs;
+		if (!uniqueGoals.empty()) {
+			std::transform(std::begin(uniqueGoals), std::prev(std::end(uniqueGoals)),
+					std::next(std::begin(uniqueGoals)), std::back_inserter(state_pairs),
+					std::make_pair<decltype(uniqueGoals)::const_reference,
+							decltype(uniqueGoals)::const_reference>);
+		}
+
+		//const char* name = "file.txt";
+		//std::ofstream out;
+		//out.open(name, std::ios_base::app);
+
+		for (auto i = state_pairs.begin(); i!= state_pairs.end(); i++){
+			findPath(obstacles, robot, (*i).first, (*i).second);
+		}
+
+
 
 }

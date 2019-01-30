@@ -57,12 +57,20 @@ int main(int argc, char *argv[]) {
 			s.x = x;
 			s.y = y;
 			s.z = z;
+
+			// Ensure that the orientation entries are unit quaternions
 			double qx, qy, qz, qw = 0;
 			ori >> qx >> qy >> qz >> qw;
-			s.qx = qx;
-			s.qy = qy;
-			s.qz = qz;
-			s.qw = qw;
+			Eigen::Quaterniond q;
+			q.x() = qx;
+			q.y() = qy;
+			q.z() = qz;
+			q.w() = qw;
+			q.normalize();
+			s.qx = q.x();
+			s.qy = q.y();
+			s.qz = q.z();
+			s.qw = q.w();
 
 			f.push_back(s);
 		}
