@@ -104,22 +104,21 @@ vtkSmartPointer<vtkSTLReader> readMesh(std::string filename) {
 	return reader;
 }
 
-void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
-		std::string robot) {
+void visualizePath( std::string obstacles,
+		std::string robot, const char* filename) {
 	// first write to path
 	// TODO -- read the states in memory without writing to file
 
 	// FILE IO
 	vtkSmartPointer<vtkSTLReader> obstacle_reader = readMesh(obstacles);
 	vtkSmartPointer<vtkSTLReader> robot_reader = readMesh(robot);
-	writePath(setup);
 
 	// initialize the assembled states
 	vtkSmartPointer<vtkAppendPolyData> appendTransformedRobot = vtkSmartPointer<
 			vtkAppendPolyData>::New();
 
 	// read path and transform states
-	std::ifstream infile("file.txt");
+	std::ifstream infile(filename);
 	std::string line;
 	while (std::getline(infile, line)) {
 		std::istringstream iss(line);

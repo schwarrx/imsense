@@ -21,9 +21,8 @@ using namespace ompl;
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
-
 void findPath(std::string obstacles, std::string robot, state start_state,
-		state goal_state) {
+		state goal_state, std::ofstream& out) {
 
 	// Motion planning for a robot moving in SE(3)
 	// in the presences of physical obstacles
@@ -77,10 +76,8 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 		double length = setup.getSolutionPath().length();
 		cout << "Path length =" << length << endl;
 
-		setup.getSolutionPath().printAsMatrix(std::cout);
-		// Get all the transformations in the path
+		setup.getSolutionPath().printAsMatrix(out);
 
-		visualizePath(setup, obstacles, robot);
 
 	}
 
@@ -124,22 +121,36 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 	// read the stl files for the obstacle and robot
 
 	// make pairs from the path
-		std::vector<std::pair<state, state>> state_pairs;
-		if (!uniqueGoals.empty()) {
-			std::transform(std::begin(uniqueGoals), std::prev(std::end(uniqueGoals)),
-					std::next(std::begin(uniqueGoals)), std::back_inserter(state_pairs),
-					std::make_pair<decltype(uniqueGoals)::const_reference,
-							decltype(uniqueGoals)::const_reference>);
+	std::vector<std::pair<state, state>> state_pairs;
+	if (!uniqueGoals.empty()) {
+		std::transform(std::begin(uniqueGoals),
+				std::prev(std::end(uniqueGoals)),
+				std::next(std::begin(uniqueGoals)),
+				std::back_inserter(state_pairs),
+				std::make_pair<decltype(uniqueGoals)::const_reference,
+						decltype(uniqueGoals)::const_reference>);
+	}
+
+	const char* name = "file.txt";
+	std::ofstream out;
+
+	out.open(name, std::ios_base::app);
+	for (auto i = state_pairs.begin(); i != state_pairs.end(); i++) {
+		findPath(obstacles, robot, (*i).first, (*i).second, out);
+	}
+
+	out.close();
+	// clean up empty lines that OMPL puts in
+	std::ifstream in("file.txt");
+	std::ofstream outfile("states.txt");
+	std::string line;
+	while (getline(in, line)) {
+		if (!line.empty()) {
+			outfile << line << '\n';
 		}
+	}
 
-		//const char* name = "file.txt";
-		//std::ofstream out;
-		//out.open(name, std::ios_base::app);
-
-		for (auto i = state_pairs.begin(); i!= state_pairs.end(); i++){
-			findPath(obstacles, robot, (*i).first, (*i).second);
-		}
-
-
+	// visualize
+	visualizePath(obstacles, robot, "states.txt");
 
 }
