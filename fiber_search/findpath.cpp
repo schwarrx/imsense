@@ -13,6 +13,7 @@
 #include "se3graph.h"
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/prm/PRM.h>
+#include <omplapp/geometry/detail/FCLStateValidityChecker.h>
 #include <ompl/geometric/planners/kpiece/LBKPIECE1.h>
 #include <iterator>
 #include <vector>
@@ -23,7 +24,7 @@ namespace og = ompl::geometric;
 
 
 void findPath(std::string obstacles, std::string robot, state start_state,
-		state goal_state) {
+		state goal_state, std::string actual) {
 
 	// Motion planning for a robot moving in SE(3)
 	// in the presences of physical obstacles
@@ -35,7 +36,7 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 	setup.setStateValidityCheckerType(ompl::app::FCL);
 
 	// setting collision checking resolution to 1% of the space extent
-	setup.getSpaceInformation()->setStateValidityCheckingResolution(0.01);
+	setup.getSpaceInformation()->setStateValidityCheckingResolution(0.1);
 
 	// pick the planner
 	setup.setPlanner(
@@ -60,6 +61,7 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 	goal->rotation().z = goal_state.qz;
 	goal->rotation().w = goal_state.qw;
 
+
 	// set start and goal states
 	setup.setStartAndGoalStates(start, goal);
 
@@ -80,14 +82,14 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 		setup.getSolutionPath().printAsMatrix(std::cout);
 		// Get all the transformations in the path
 
-		visualizePath(setup, obstacles, robot);
+		visualizePath(setup, obstacles, robot, actual);
 
 	}
 
 }
 
 void findPathBetweenFibers(std::string obstacles, std::string robot,
-		std::vector<fiber> allfibers) {
+		std::vector<fiber> allfibers, std::string actual) {
 
 	std::vector<state> goal_states;
 
@@ -137,7 +139,7 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 		//out.open(name, std::ios_base::app);
 
 		for (auto i = state_pairs.begin(); i!= state_pairs.end(); i++){
-			findPath(obstacles, robot, (*i).first, (*i).second);
+			findPath(obstacles, robot, (*i).first, (*i).second, actual);
 		}
 
 

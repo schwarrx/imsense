@@ -19,4 +19,4 @@
 #include <omplapp/config.h>
 
 void visualizePath(ompl::app::SE3RigidBodyPlanning setup,
-		std::string obstacles, std::string robot);
+		std::string obstacles, std::string robot, std::string actual);

@@ -30,6 +30,7 @@
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkAxesActor.h>
 #include <vtkBoundingBox.h>
+#include <vtkSmoothPolyDataFilter.h>
 
 //Eigen
 #include <Eigen/Geometry>
@@ -42,6 +43,15 @@ namespace og = ompl::geometric;
 void visualize(vtkSmartPointer<vtkAppendPolyData> unified) {
 	// Visualize an unordered collection of parts in assembly
 
+	  vtkSmartPointer<vtkSmoothPolyDataFilter> smoothFilter =
+	        vtkSmartPointer<vtkSmoothPolyDataFilter>::New();
+	    smoothFilter->SetInputConnection(unified->GetOutputPort());
+	    smoothFilter->SetNumberOfIterations(15);
+	    smoothFilter->SetRelaxationFactor(0.1);
+	    smoothFilter->FeatureEdgeSmoothingOff();
+	    smoothFilter->BoundarySmoothingOn();
+	    smoothFilter->Update();
+
 	// do the usual vtk rendering stuff
 	vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<
 			vtkPolyDataMapper>::New();
@@ -52,7 +62,8 @@ void visualize(vtkSmartPointer<vtkAppendPolyData> unified) {
 	// create renderer
 	vtkSmartPointer<vtkRenderer> ren = vtkSmartPointer<vtkRenderer>::New();
 	ren->AddActor(actor);
-	ren->SetBackground(0.2, 0.5, 0.5);
+	//ren->SetBackground(0.2, 0.5, 0.5);
+	ren->SetBackground(1, 1, 1);
 
 	// add renderer to render window
 	vtkSmartPointer<vtkRenderWindow> renWin =
@@ -105,7 +116,7 @@ vtkSmartPointer<vtkSTLReader> readMesh(std::string filename) {
 }
 
 void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
-		std::string robot) {
+		std::string robot, std::string actual) {
 	// first write to path
 	// TODO -- read the states in memory without writing to file
 
@@ -157,6 +168,12 @@ void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
 	// add the obstacle
 	appendTransformedRobot->AddInputConnection(
 			obstacle_reader->GetOutputPort());
+
+	// add the actual part
+	vtkSmartPointer<vtkSTLReader> actual_reader = readMesh(actual);
+	appendTransformedRobot->AddInputConnection(
+				actual_reader->GetOutputPort());
+
 
 	visualize(appendTransformedRobot);
 }

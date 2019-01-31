@@ -19,9 +19,7 @@
 // solve the motion planning problem
 
 void findPathBetweenFibers(std::string obstacles, std::string robot,
-		std::vector<fiber> allfibers);
+		std::vector<fiber> allfibers, std::string actual);
 
-void findPath(std::string obstacles, std::string robot, state start_state,
-		state goal_state);
 
 #endif
