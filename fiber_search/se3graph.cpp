@@ -44,7 +44,7 @@ void PrintEdges(Graph g, const char* name) {
 	std::cout << std::endl;
 }
 
-Graph fiberGraph(std::vector<fiber> fibers) {
+Graph fiberGraph(std::vector<fiber> &fibers) {
 
 	// create a graph and add all fibers as nodes.
 	Graph g(fibers.size()); // Create a graph with as many vertices as there are fibers

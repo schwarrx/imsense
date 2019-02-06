@@ -19,7 +19,7 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-	if ((argc != 5)) {
+	if ((argc != 6)) {
 		cout << "Number of arguments = " << argc << endl;
 		cout << "usage = " << endl;
 		cout << "./fiberSearch obstacle robot fibers \n" << endl;
@@ -79,10 +79,11 @@ int main(int argc, char *argv[]) {
 
 	std::string obstacle(argv[1]);
 	std::string robot(argv[2]);
-	std::string actual(argv[4]);
+	std::string actual_obs(argv[4]);
+	std::string actual_part(argv[5]);
 
 
-	findPathBetweenFibers(obstacle, robot, allfibers, actual);
+	findPathBetweenFibers(obstacle, robot, allfibers, actual_obs, actual_part);
 
 	return 0;
 

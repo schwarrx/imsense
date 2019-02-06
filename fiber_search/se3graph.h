@@ -35,7 +35,7 @@ boost::undirectedS, boost::no_property, EdgeWeightProperty>;
 typedef boost::graph_traits<Graph>::edge_descriptor Edge;
 
 
-Graph fiberGraph(std::vector<fiber> fibers);
+Graph fiberGraph(std::vector<fiber> &fibers);
 std::vector<Edge> computeMST(Graph g);
 std::vector<unsigned int>  solveTSP(Graph g);
 

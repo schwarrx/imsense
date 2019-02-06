@@ -24,7 +24,7 @@ namespace og = ompl::geometric;
 
 
 void findPath(std::string obstacles, std::string robot, state start_state,
-		state goal_state, std::string actual) {
+		state goal_state, std::string actual_obs, std::string actual_part) {
 
 	// Motion planning for a robot moving in SE(3)
 	// in the presences of physical obstacles
@@ -36,7 +36,7 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 	setup.setStateValidityCheckerType(ompl::app::FCL);
 
 	// setting collision checking resolution to 1% of the space extent
-	setup.getSpaceInformation()->setStateValidityCheckingResolution(0.1);
+	setup.getSpaceInformation()->setStateValidityCheckingResolution(0.3);
 
 	// pick the planner
 	setup.setPlanner(
@@ -82,14 +82,14 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 		setup.getSolutionPath().printAsMatrix(std::cout);
 		// Get all the transformations in the path
 
-		visualizePath(setup, obstacles, robot, actual);
+		visualizePath(setup, actual_obs, robot, actual_part);
 
 	}
 
 }
 
 void findPathBetweenFibers(std::string obstacles, std::string robot,
-		std::vector<fiber> allfibers, std::string actual) {
+		std::vector<fiber> allfibers, std::string actual_obs, std::string actual_part) {
 
 	std::vector<state> goal_states;
 
@@ -98,6 +98,9 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 
 	cout << "Solving TSP" << endl;
 	std::vector<unsigned int> path = solveTSP(fibgraph);
+
+	cout << "Computing the MST" << endl;
+	computeMST(fibgraph);
 
 	cout << "Computing goal states for fiber path ";
 	computeStateGoals(path, allfibers, goal_states);
@@ -139,7 +142,7 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 		//out.open(name, std::ios_base::app);
 
 		for (auto i = state_pairs.begin(); i!= state_pairs.end(); i++){
-			findPath(obstacles, robot, (*i).first, (*i).second, actual);
+			findPath(obstacles, robot, (*i).first, (*i).second, actual_obs, actual_part);
 		}
 
 
