@@ -22,6 +22,8 @@
 #include <iterator>
 #include <vector>
 
+#include <ompl/base/StateValidityChecker.h>
+
 // The supported optimal planners, in alphabetical order
 #include <ompl/geometric/planners/bitstar/BITstar.h>
 #include <ompl/geometric/planners/cforest/CForest.h>
@@ -32,7 +34,7 @@
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/SORRTstar.h>
 
- #include <memory>
+#include <memory>
 
 using namespace ompl;
 namespace ob = ompl::base;
@@ -76,44 +78,42 @@ public:
 
 ob::OptimizationObjectivePtr getClearanceObjective(
 		const ob::SpaceInformationPtr& si) {
-	return std::make_shared<ClearanceObjective>(si);
+	return std::make_shared < ClearanceObjective > (si);
 }
 
 ob::OptimizationObjectivePtr getPathLengthObjective(
 		const ob::SpaceInformationPtr& si) {
-	return std::make_shared<ob::PathLengthOptimizationObjective>(si);
+	return std::make_shared < ob::PathLengthOptimizationObjective > (si);
 }
 
-/*class ValidityChecker: public ob::StateValidityChecker {
+class ValidityChecker: public ob::StateValidityChecker {
 public:
 	ValidityChecker(const ob::SpaceInformationPtr& si) :
 			ob::StateValidityChecker(si) {
 	}
 	// Returns whether the given state's position overlaps the
 	// circular obstacle
-	bool isValid(const ob::State* mystate) const {
+	virtual bool isValid(const ob::State* mystate) const {
 		return this->clearance(mystate) > 0.0;
 	}
 	// Returns the distance from the given state's position to the
 	// boundary of the circular obstacle.
 	double clearance(const ob::State* mystate) const {
-		 const ob::SE3StateSpace::StateType* state_g =
-		 mystate->as<ob::SE3StateSpace::StateType>();
-		 state g;
-		 g.x = state_g->getX();
-		 g.y = state_g->getY();
-		 g.z = state_g->getZ();
-		 g.qx = state_g->rotation().x;
-		 g.qy = state_g->rotation().y;
-		 g.qz = state_g->rotation().z;
-		 g.qw = state_g->rotation().w;
-
+		const ob::SE3StateSpace::StateType* state_g = mystate->as<
+				ob::SE3StateSpace::StateType>();
+		state g;
+		g.x = state_g->getX();
+		g.y = state_g->getY();
+		g.z = state_g->getZ();
+		g.qx = state_g->rotation().x;
+		g.qy = state_g->rotation().y;
+		g.qz = state_g->rotation().z;
+		g.qw = state_g->rotation().w;
 
 		// set clearance of 0.25
 		return 0.025;
 	}
-};*/
-
+};
 
 ob::OptimizationObjectivePtr allocateObjective(
 		const ob::SpaceInformationPtr& si, planningObjective objectiveType) {
@@ -136,35 +136,35 @@ ob::PlannerPtr allocatePlanner(ob::SpaceInformationPtr si,
 		optimalPlanner plannerType) {
 	switch (plannerType) {
 	case PLANNER_BFMTSTAR: {
-		return std::make_shared<og::BFMT>(si);
+		return std::make_shared < og::BFMT > (si);
 		break;
 	}
 	case PLANNER_BITSTAR: {
-		return std::make_shared<og::BITstar>(si);
+		return std::make_shared < og::BITstar > (si);
 		break;
 	}
 	case PLANNER_CFOREST: {
-		return std::make_shared<og::CForest>(si);
+		return std::make_shared < og::CForest > (si);
 		break;
 	}
 	case PLANNER_FMTSTAR: {
-		return std::make_shared<og::FMT>(si);
+		return std::make_shared < og::FMT > (si);
 		break;
 	}
 	case PLANNER_INF_RRTSTAR: {
-		return std::make_shared<og::InformedRRTstar>(si);
+		return std::make_shared < og::InformedRRTstar > (si);
 		break;
 	}
 	case PLANNER_PRMSTAR: {
-		return std::make_shared<og::PRMstar>(si);
+		return std::make_shared < og::PRMstar > (si);
 		break;
 	}
 	case PLANNER_RRTSTAR: {
-		return std::make_shared<og::RRTstar>(si);
+		return std::make_shared < og::RRTstar > (si);
 		break;
 	}
 	case PLANNER_SORRTSTAR: {
-		return std::make_shared<og::SORRTstar>(si);
+		return std::make_shared < og::SORRTstar > (si);
 		break;
 	}
 	default: {
@@ -177,7 +177,7 @@ ob::PlannerPtr allocatePlanner(ob::SpaceInformationPtr si,
 }
 
 void findPath(std::string obstacles, std::string robot, state start_state,
-		state goal_state, std::string actual_obs, std::string actual_part) {
+		state goal_state, std::string actual_obs) {
 
 	// Motion planning for a robot moving in SE(3)
 	// in the presences of physical obstacles
@@ -189,11 +189,13 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 	// FCL appears to be better
 	setup.setStateValidityCheckerType(ompl::app::FCL);
 
+
 	// setting collision checking resolution to 1% of the space extent
 	setup.getSpaceInformation()->setStateValidityCheckingResolution(0.01);
 
 	// pick the planner
-	setup.setPlanner(std::make_shared<og::RRTstar>(setup.getSpaceInformation()));
+	setup.setPlanner(
+			std::make_shared < og::SPARS > (setup.getSpaceInformation()));
 
 	// define compound start and goal states
 	ob::ScopedState<base::SE3StateSpace> start(setup.getSpaceInformation());
@@ -220,12 +222,11 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 
 	// Create the optimization objective specified by our command-line argument.
 	// This helper function is simply a switch statement.
-	setup.setOptimizationObjective(
+	/*setup.setOptimizationObjective(
 			allocateObjective(setup.getSpaceInformation(),
-					OBJECTIVE_PATHCLEARANCE));
-
-
-	double runTime = 20;
+					OBJECTIVE_PATHLENGTH));
+*/
+	double runTime = 2;
 	// try to solve the motion planning problem
 	if (setup.solve(runTime)) {
 		// simplify & print the solution
@@ -239,15 +240,15 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 		setup.getSolutionPath().printAsMatrix(std::cout);
 		// Get all the transformations in the path
 
-		visualizePath(setup, actual_obs, robot, actual_part);
+		//visualizePath(setup, obstacles, robot, actual_obs);
+		visualizeForPaper(setup,obstacles, actual_obs, robot);
 
 	}
 
 }
 
 void findPathBetweenFibers(std::string obstacles, std::string robot,
-		std::vector<fiber> allfibers, std::string actual_obs,
-		std::string actual_part) {
+		std::vector<fiber> allfibers, std::string actual_obs) {
 
 	std::vector<state> goal_states;
 
@@ -302,8 +303,7 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 	//out.open(name, std::ios_base::app);
 
 	for (auto i = state_pairs.begin(); i != state_pairs.end(); i++) {
-		findPath(obstacles, robot, (*i).first, (*i).second, actual_obs,
-				actual_part);
+		findPath(obstacles, robot, (*i).first, (*i).second, actual_obs);
 	}
 
 }
