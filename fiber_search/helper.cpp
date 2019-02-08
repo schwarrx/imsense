@@ -188,21 +188,39 @@ void visualizePath(app::SE3RigidBodyPlanning setup, std::string obstacles,
 	visualize(appendTransformedRobot);
 }
 
-void visualizeForPaper(app::SE3RigidBodyPlanning setup, std::string part,
-		std::string supports, std::string robot) {
+vtkSmartPointer<vtkActor> returnActor(
+		vtkSmartPointer<vtkAppendPolyData> appended, double r, double g,
+		double b) {
+
+	vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<
+			vtkPolyDataMapper>::New();
+	mapper1->SetInputConnection(appended->GetOutputPort());
+
+	vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+	actor1->SetMapper(mapper1);
+	actor1->GetProperty()->SetInterpolationToPhong();
+	actor1->GetProperty()->SetColor(r, g, b); //(R,G,B)
+
+	return actor1;
+
+}
+
+void visualizeForPaper(app::SE3RigidBodyPlanning setup, std::string tool,
+		std::string part, std::string supports, std::string platform) {
 
 	// first read the supports & part stl file
-	vtkSmartPointer<vtkSTLReader> supportsReader = readMesh(supports);
 	vtkSmartPointer<vtkSTLReader> partReader = readMesh(part);
-	vtkSmartPointer<vtkSTLReader> robot_reader = readMesh(robot);
+	vtkSmartPointer<vtkSTLReader> toolReader = readMesh(tool);
+	vtkSmartPointer<vtkSTLReader> supportsReader = readMesh(supports);
+	vtkSmartPointer<vtkSTLReader> platformReader = readMesh(platform);
 
 	writePath(setup);
 
 	// create a vtk append polydata
-	vtkSmartPointer<vtkAppendPolyData> appendPartAndSupports = vtkSmartPointer<
+	vtkSmartPointer<vtkAppendPolyData> appendPartAndPlatform = vtkSmartPointer<
 			vtkAppendPolyData>::New();
-	appendPartAndSupports->AddInputConnection(supportsReader->GetOutputPort());
-	appendPartAndSupports->AddInputConnection(partReader->GetOutputPort());
+	appendPartAndPlatform->AddInputConnection(platformReader->GetOutputPort());
+	appendPartAndPlatform->AddInputConnection(partReader->GetOutputPort());
 
 	// initialize the assembled states
 	vtkSmartPointer<vtkAppendPolyData> appendTransformedRobot = vtkSmartPointer<
@@ -226,9 +244,10 @@ void visualizeForPaper(app::SE3RigidBodyPlanning setup, std::string part,
 		q.normalize();
 		Eigen::Matrix3d rot = q.toRotationMatrix();
 
+		// add the 0.5 fudge factor (see goal + start state setting in findpath)
 		const double rowmajor[16] = { rot(0, 0), rot(0, 1), rot(0, 2), x, rot(1,
-				0), rot(1, 1), rot(1, 2), y, rot(2, 0), rot(2, 1), rot(2, 2), z,
-				0, 0, 0, 1 };
+				0), rot(1, 1), rot(1, 2), y + 0.5, rot(2, 0), rot(2, 1), rot(2,
+				2), z, 0, 0, 0, 1 };
 		// set up a vtk transform
 		vtkSmartPointer<vtkTransform> transformation = vtkSmartPointer<
 				vtkTransform>::New();
@@ -236,7 +255,7 @@ void visualizeForPaper(app::SE3RigidBodyPlanning setup, std::string part,
 
 		vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter =
 				vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-		transformFilter->SetInputConnection(robot_reader->GetOutputPort());
+		transformFilter->SetInputConnection(toolReader->GetOutputPort());
 		transformFilter->SetTransform(transformation);
 		transformFilter->Update();
 
@@ -245,35 +264,33 @@ void visualizeForPaper(app::SE3RigidBodyPlanning setup, std::string part,
 
 	}
 
+	vtkSmartPointer<vtkActor> partAndPlatformActor = returnActor(
+			appendPartAndPlatform, 0.2, 0.3, 0.7);
+
+	vtkSmartPointer<vtkActor> sweptToolActor = returnActor(
+			appendTransformedRobot, 0.7, 0.1, 0.1);
+
 	// Now visualize the part+supports and the transformed robot
 	// do the usual vtk rendering stuff
 	vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<
 			vtkPolyDataMapper>::New();
-	mapper1->SetInputConnection(appendPartAndSupports->GetOutputPort());
+	mapper1->SetInputConnection(supportsReader->GetOutputPort());
 
 	vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
 	actor1->SetMapper(mapper1);
 	actor1->GetProperty()->SetInterpolationToPhong();
-	actor1->GetProperty()->SetColor(0.2,0.3,0.7); //(R,G,B)
-
-	vtkSmartPointer<vtkPolyDataMapper> mapper2 = vtkSmartPointer<
-			vtkPolyDataMapper>::New();
-	mapper2->SetInputConnection(appendTransformedRobot->GetOutputPort());
-
-	vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
-	actor2->SetMapper(mapper2);
-	actor2->GetProperty()->SetInterpolationToPhong();
 
 	vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
 	camera->SetPosition(0, 0, 0.5);
 	camera->SetFocalPoint(0.5, 0.5, 0.5);
 	//camera->SetViewUp(-0.612375, -0.612375, 1);
-	camera->SetViewUp(1,1,1);
+	camera->SetViewUp(1, 1, 1);
 
 	// create renderer
 	vtkSmartPointer<vtkRenderer> ren = vtkSmartPointer<vtkRenderer>::New();
+	ren->AddActor(partAndPlatformActor);
+	ren->AddActor(sweptToolActor);
 	ren->AddActor(actor1);
-	ren->AddActor(actor2);
 	//ren->SetBackground(0.2, 0.5, 0.5);
 	ren->SetBackground(1, 1, 1);
 	ren->SetActiveCamera(camera);
@@ -294,7 +311,7 @@ void visualizeForPaper(app::SE3RigidBodyPlanning setup, std::string part,
 	vtkSmartPointer<vtkOrientationMarkerWidget> widget = vtkSmartPointer<
 			vtkOrientationMarkerWidget>::New();
 	widget->SetOutlineColor(0.9300, 0.5700, 0.1300);
-	widget->SetOrientationMarker(axes);
+	//widget->SetOrientationMarker(axes);
 	widget->SetInteractor(iren);
 	widget->SetEnabled(1);
 	widget->InteractiveOn();
@@ -306,3 +323,97 @@ void visualizeForPaper(app::SE3RigidBodyPlanning setup, std::string part,
 
 }
 
+vtkSmartPointer<vtkActor> returnSTLActor(vtkSmartPointer<vtkSTLReader> appended,
+		double r, double g, double b) {
+
+	vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<
+			vtkPolyDataMapper>::New();
+	mapper1->SetInputConnection(appended->GetOutputPort());
+
+	vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+	actor1->SetMapper(mapper1);
+	actor1->GetProperty()->SetInterpolationToPhong();
+	actor1->GetProperty()->SetColor(r, g, b); //(R,G,B)
+
+	return actor1;
+
+}
+
+void visualizeSetupForPaper(std::string tool, std::string part,
+		std::string supports, std::string platform, std::string disloc) {
+
+	// first read the supports & part stl file
+	vtkSmartPointer<vtkSTLReader> partReader = readMesh(part);
+	vtkSmartPointer<vtkSTLReader> toolReader = readMesh(tool);
+	vtkSmartPointer<vtkSTLReader> supportsReader = readMesh(supports);
+	vtkSmartPointer<vtkSTLReader> platformReader = readMesh(platform);
+	vtkSmartPointer<vtkSTLReader> dislocReader = readMesh(disloc);
+
+	// create a vtk append polydata
+	vtkSmartPointer<vtkAppendPolyData> appendPartAndPlatform = vtkSmartPointer<
+			vtkAppendPolyData>::New();
+	appendPartAndPlatform->AddInputConnection(platformReader->GetOutputPort());
+	appendPartAndPlatform->AddInputConnection(partReader->GetOutputPort());
+
+	vtkSmartPointer<vtkActor> partAndPlatformActor = returnActor(
+			appendPartAndPlatform, 0.2, 0.3, 0.7);
+
+	vtkSmartPointer<vtkActor> toolActor = returnSTLActor(toolReader, 0.7, 0.1,
+			0.1);
+	vtkSmartPointer<vtkActor> dislocActor = returnSTLActor(dislocReader, 0.1, 0.7,
+			0.1);
+
+	// Now visualize the part+supports and the transformed robot
+	// do the usual vtk rendering stuff
+	vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<
+			vtkPolyDataMapper>::New();
+	mapper1->SetInputConnection(supportsReader->GetOutputPort());
+
+	vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+	actor1->SetMapper(mapper1);
+	actor1->GetProperty()->SetInterpolationToPhong();
+	actor1->GetProperty()->SetRepresentationToWireframe();
+
+	vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+	camera->SetPosition(0, 0, 0.5);
+	camera->SetFocalPoint(0.5, 0.5, 0.5);
+	//camera->SetViewUp(-0.612375, -0.612375, 1);
+	camera->SetViewUp(1, 1, 1);
+
+	// create renderer
+	vtkSmartPointer<vtkRenderer> ren = vtkSmartPointer<vtkRenderer>::New();
+	ren->AddActor(partAndPlatformActor);
+	ren->AddActor(toolActor);
+	ren->AddActor(dislocActor);
+	ren->AddActor(actor1);
+	//ren->SetBackground(0.2, 0.5, 0.5);
+	ren->SetBackground(1, 1, 1);
+	ren->SetActiveCamera(camera);
+
+	// add renderer to render window
+	vtkSmartPointer<vtkRenderWindow> renWin =
+			vtkSmartPointer<vtkRenderWindow>::New();
+	renWin->AddRenderer(ren);
+	renWin->SetSize(1400, 1400);
+
+	// create interactor
+	vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<
+			vtkRenderWindowInteractor>::New();
+	iren->SetRenderWindow(renWin);
+
+	// draw axes
+	vtkSmartPointer<vtkAxesActor> axes = vtkSmartPointer<vtkAxesActor>::New();
+	vtkSmartPointer<vtkOrientationMarkerWidget> widget = vtkSmartPointer<
+			vtkOrientationMarkerWidget>::New();
+	widget->SetOutlineColor(0.9300, 0.5700, 0.1300);
+	//widget->SetOrientationMarker(axes);
+	widget->SetInteractor(iren);
+	widget->SetEnabled(1);
+	widget->InteractiveOn();
+
+	//render
+	ren->ResetCamera();
+	renWin->Render();
+	iren->Start();
+
+}

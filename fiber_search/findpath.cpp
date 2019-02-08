@@ -176,8 +176,12 @@ ob::PlannerPtr allocatePlanner(ob::SpaceInformationPtr si,
 	}
 }
 
+
+
+
 void findPath(std::string obstacles, std::string robot, state start_state,
-		state goal_state, std::string actual_obs) {
+		state goal_state,std::string part, std::string supports,
+		std::string platform ) {
 
 	// Motion planning for a robot moving in SE(3)
 	// in the presences of physical obstacles
@@ -191,23 +195,23 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 
 
 	// setting collision checking resolution to 1% of the space extent
-	setup.getSpaceInformation()->setStateValidityCheckingResolution(0.01);
+	setup.getSpaceInformation()->setStateValidityCheckingResolution(0.0001);
 
 	// pick the planner
 	setup.setPlanner(
-			std::make_shared < og::SPARS > (setup.getSpaceInformation()));
+			std::make_shared < og::RRTConnect > (setup.getSpaceInformation()));
 
 	// define compound start and goal states
 	ob::ScopedState<base::SE3StateSpace> start(setup.getSpaceInformation());
 	ob::ScopedState<base::SE3StateSpace> goal(setup.getSpaceInformation());
 
-	start->setXYZ(start_state.x, start_state.y, start_state.z);
+	start->setXYZ(start_state.x , start_state.y -0.5 , start_state.z);
 	start->rotation().x = start_state.qx;
 	start->rotation().y = start_state.qy;
 	start->rotation().z = start_state.qz;
 	start->rotation().w = start_state.qw;
 
-	goal->setXYZ(goal_state.x, goal_state.y, goal_state.z);
+	goal->setXYZ(goal_state.x , goal_state.y -0.5, goal_state.z);
 	goal->rotation().x = goal_state.qx;
 	goal->rotation().y = goal_state.qy;
 	goal->rotation().z = goal_state.qz;
@@ -241,14 +245,15 @@ void findPath(std::string obstacles, std::string robot, state start_state,
 		// Get all the transformations in the path
 
 		//visualizePath(setup, obstacles, robot, actual_obs);
-		visualizeForPaper(setup,obstacles, actual_obs, robot);
+		visualizeForPaper(setup,robot, part, supports, platform);
 
 	}
 
 }
 
 void findPathBetweenFibers(std::string obstacles, std::string robot,
-		std::vector<fiber> allfibers, std::string actual_obs) {
+		std::vector<fiber> allfibers, std::string part, std::string supports,
+		std::string platform) {
 
 	std::vector<state> goal_states;
 
@@ -302,8 +307,9 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 	//std::ofstream out;
 	//out.open(name, std::ios_base::app);
 
+
 	for (auto i = state_pairs.begin(); i != state_pairs.end(); i++) {
-		findPath(obstacles, robot, (*i).first, (*i).second, actual_obs);
+		findPath(obstacles, robot, (*i).first, (*i).second, part, supports, platform);
 	}
 
 }

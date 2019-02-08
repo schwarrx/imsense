@@ -14,22 +14,34 @@
 #include "se3graph.h"
 #include "findpath.h"
 #include "state.h"
+#include "helper.h"
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
 
-	if ((argc != 5)) {
+	if ((argc != 8)) {
 		cout << "Number of arguments = " << argc << endl;
 		cout << "usage = " << endl;
-		cout << "./fiberSearch obstacle robot fibers \n" << endl;
+		cout << "./fiberSearch obstacle robot fibers part supports platform \n"
+				<< endl;
 		exit(1);
 	}
 
-	// read path and transform states
+	std::string obstacle(argv[1]);
+	std::string robot(argv[2]);
 	std::ifstream infile(argv[3]);
+	std::string part(argv[4]);
+	std::string supports(argv[5]);
+	std::string platform(argv[6]);
+	std::string disloc(argv[7]);
+
+	visualizeSetupForPaper(robot, part, supports,platform, disloc);
+
+	// read path and transform states
+
 	std::string line;
-	cout << "Reading fibers" << endl;
+	cout << "Reading fibers" << argv[3] <<  endl;
 
 	// store a vector of fibers
 	std::vector<fiber> allfibers;
@@ -77,12 +89,7 @@ int main(int argc, char *argv[]) {
 		allfibers.push_back(f);
 	}
 
-	std::string obstacle(argv[1]);
-	std::string robot(argv[2]);
-	std::string actual_obs(argv[4]);
-
-
-	findPathBetweenFibers(obstacle, robot, allfibers, actual_obs);
+	findPathBetweenFibers(obstacle, robot, allfibers, part, supports, platform);
 
 	return 0;
 

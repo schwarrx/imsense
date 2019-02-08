@@ -21,5 +21,8 @@
 void visualizePath(ompl::app::SE3RigidBodyPlanning setup, std::string obstacles,
 		std::string robot, std::string actual);
 
-void visualizeForPaper(ompl::app::SE3RigidBodyPlanning setup, std::string part,
-		std::string supports, std::string robot);
+void visualizeForPaper(ompl::app::SE3RigidBodyPlanning setup, std::string tool,
+		std::string part, std::string supports, std::string platform);
+
+void visualizeSetupForPaper(std::string tool, std::string part,
+		std::string supports, std::string platform, std::string disloc);
