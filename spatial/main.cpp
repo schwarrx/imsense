@@ -26,12 +26,11 @@ using namespace std;
 int main(int argc, char *argv[]) {
     try {
 
-        if(argc !=4 ){
-            cout << "usage: ./spatialTests partFile.binvox toolAssembly.binvox quaternionFile";
+        if(argc !=5 ){
+            cout << "usage: ./spatialTests partFile.binvox toolAssembly.binvox quaternionFile nslices";
             exit(1);
         }
         // Select a device and display arrayfire info
-        af::setDevice(6);
         af::info();
 
         int ndevices = getDeviceCount(); // number of available GPUs
@@ -42,29 +41,22 @@ int main(int argc, char *argv[]) {
         // part assembly indicator function
         af::array part = read_binvox(argv[1]);
         int partDim = part.dims()[0];
-        //writeAFArray(part, "part.stl");
-        //visualize(part);
 
         // tool assembly indicator function
         af::array toolAssembly = read_binvox(argv[2]);
-        writeAFArray(rotate(toolAssembly,45, true, AF_INTERP_BICUBIC_SPLINE),"rotated45.stl");
-        writeAFArray(reorder(toolAssembly, 2, 1, 0), "swapxz.stl");
-        writeAFArray(rotate(reorder(toolAssembly, 2, 1, 0),45, true, AF_INTERP_BICUBIC_SPLINE),"swapxz_rotated45.stl");
-        writeAFArray(reorder(toolAssembly, 0, 2, 1), "swapyz.stl");
-        writeAFArray(rotate(reorder(toolAssembly, 0, 2, 1),45, true, AF_INTERP_BICUBIC_SPLINE),"swapxz_rotated45.stl");
-
-
-        //writeAFArray(toolAssembly, "tool.stl");
 
         //assume tool assembly voxel resolution is tDim * tDim * tDim
         int tDim = toolAssembly.dims()[0];
 
 
         int resultDim = partDim + tDim -1;
-        int n = 10; // 10 r-slices can be fit on a GPU
+
+
+
+        int n = int(atof(argv[4])); // 10 r-slices can be fit on a GPU
         af::array rSlices = af::array(resultDim, resultDim, resultDim, n);
 
-        af::array projectedBoundary= constant(0,resultDim, resultDim,resultDim,f32);
+        //af::array projectedBoundary= constant(0,resultDim, resultDim,resultDim,f32);
 
         //omp_set_num_threads(ndevices-1);
 
@@ -89,9 +81,9 @@ int main(int argc, char *argv[]) {
         /////////////// NOTE : WE ARE ASSUMING THE SAME TOOL FOR EVERY ORIENTATION //////////////////
 
         gfor(seq i,n){
-            af::array result = convolveAF(part, rotate(toolAssembly,45), true);
+            af::array result = convolveAF(part, toolAssembly, true);
             rSlices(span,span,span,i) = result;
-            projectedBoundary += result;
+            //projectedBoundary += result;
         }
 
 
