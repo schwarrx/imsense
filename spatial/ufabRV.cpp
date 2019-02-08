@@ -11,23 +11,23 @@
 
 
 
-array indicator(array x){
+af::array indicator(af::array x){
 	// returns the support of a scalar function x
 	return (x > 0);
 }
 
-array sublevel(array x, double measure){
+af::array sublevel(af::array x, double measure){
 	return (x >= measure-0.0001);
 }
 
-double volume(array x){
+double volume(af::array x){
 	// return number of non-zero elements
-	array c = count(x);
+	af::array c = count(x);
 	//af_print(c);
 	return 0;
 }
 
-array sublevelComplement(array x, double measure){
+af::array sublevelComplement(af::array x, double measure){
 	// This the complement of the sub-level sets defined in our papers
 	// because we are computing convolution directly with the part, and not with
 	// the part complement
@@ -35,7 +35,7 @@ array sublevelComplement(array x, double measure){
 }
 
 
-array toolPlungeVolume(int length, int width, int depth){
+af::array toolPlungeVolume(int length, int width, int depth){
 
 	// Describe the volume removed at a single location as a function of the tool plunge depth
 	// and the width of cut. We will assume the infinitesimal volume cut by a tool is a parallelopiped
@@ -49,12 +49,12 @@ array toolPlungeVolume(int length, int width, int depth){
 
 }
 
-array reflect(array x){
+af::array reflect(af::array x){
 	// compute the reflection of the shape, use Hermitian symmetry of DFT 
 	return real(ifft3(conjg(fft3(x))));
 }
 
-array convolveAF(array x, array y, bool correlate){
+af::array convolveAF(af::array x, af::array y, bool correlate){
     if(correlate){
         return convolve3(x,reflect(y),AF_CONV_EXPAND ,AF_CONV_AUTO);
     }
@@ -63,7 +63,7 @@ array convolveAF(array x, array y, bool correlate){
     }
 }
 
-array maxRV (array x, array y, array infPocket) {
+af::array maxRV (af::array x, af::array y, af::array infPocket) {
 
 	 // Here x represents the Part, y represents the Tool Assembly, and infPocket represents the toolPlungeVolume at a location
 	//return dilate3(indicator(sublevelComplement(convolve3(x,reflect(y),AF_CONV_EXPAND,AF_CONV_AUTO),1)),infPocket);

@@ -28,7 +28,6 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkVolumeProperty.h>
-
 #include <vtkSTLWriter.h>
 
 
@@ -245,7 +244,7 @@ af::array read_binvox(string filespec) {
  }
 
  */
-
+/*
 void writeSTL(vtkSmartPointer<vtkPolyData> polyData, std::string filename) {
     // write a polydata out to stl
 
@@ -257,7 +256,7 @@ void writeSTL(vtkSmartPointer<vtkPolyData> polyData, std::string filename) {
 
 }
 
-void writeAFArray(array x, std::string filename) {
+void writeAFArray(af::array x, std::string filename) {
     // copy data from device to host and visualize on vtk
     // not sure how to do this visualization directly in AF
     array x1 = x.as(f64);
@@ -521,5 +520,5 @@ void visualize2(array x, array y) {
     renWin->Render(); // make sure we have an OpenGL context.
     iren->Start();
 
-}
+}*/
 
