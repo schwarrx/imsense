@@ -8,7 +8,7 @@
 #include "se3graph.h"
 #include <iostream>
 #include <fstream>
-
+#include <ctime>
 #include <boost/graph/metric_tsp_approx.hpp>
 
 using namespace std;
@@ -77,9 +77,13 @@ std::vector<unsigned int> solveTSP(Graph g) {
 	vcontainer c;
 	double len = 0.0;
 
+	std::clock_t start;
+
+	start = std::clock();
 	// Run the TSP approx, creating the visitor on the fly.
 	metric_tsp_approx(g,
 			make_tsp_tour_len_visitor(g, back_inserter(c), len, weight_map));
+	std::cout << "Time to compute TSP: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
 
 	std::vector<unsigned int> path;
 
@@ -91,7 +95,7 @@ std::vector<unsigned int> solveTSP(Graph g) {
 }
 
 std::vector<state> computeStateGoals(vector<unsigned int> path,
-		std::vector<fiber> fibers,  vector<state> &goals) {
+		std::vector<fiber> fibers, vector<state> &goals) {
 	// Given a path of vertices (fiber sequence) to traverse, and a reference state
 	// compute the sequence of states which need to be traversed
 	// by the tool to avoid collisions (in a greedy way)
@@ -111,10 +115,9 @@ std::vector<state> computeStateGoals(vector<unsigned int> path,
 	for (auto i = num_pairs.begin(); i != std::prev(num_pairs.end()); i++) {
 
 		auto fiberpair = *i;
-		if(i == num_pairs.begin()){
+		if (i == num_pairs.begin()) {
 			cout << fiberpair.first << "-->" << fiberpair.second;
-		}
-		else {
+		} else {
 			cout << "-->" << fiberpair.second;
 		}
 
@@ -128,8 +131,6 @@ std::vector<state> computeStateGoals(vector<unsigned int> path,
 	return goals;
 
 }
-
-
 
 std::vector<Edge> computeMST(Graph g) {
 	// use Kruskal's algorithm to find the minimal spanning tree

@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 	std::string platform(argv[6]);
 	std::string disloc(argv[7]);
 
-	visualizeSetupForPaper(robot, part, supports,platform, disloc);
+	//visualizeSetupForPaper(robot, part, supports,platform, disloc);
 
 	// read path and transform states
 

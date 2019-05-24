@@ -260,7 +260,7 @@ void findPathBetweenFibers(std::string obstacles, std::string robot,
 	cout << "Computing fiber graph" << endl;
 	Graph fibgraph = fiberGraph(allfibers);
 
-	cout << "Solving TSP" << endl;
+	cout << "Solving TSP on " << allfibers.size() << " states" <<  endl;
 	std::vector<unsigned int> path = solveTSP(fibgraph);
 
 	cout << "Computing the MST" << endl;
