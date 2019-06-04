@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 set(PROJNAME gvdbAF)
 Project(${PROJNAME})
 Message(STATUS "-------------------------------")
@@ -79,9 +79,9 @@ IF(${ArrayFire_CUDA_FOUND} AND ${CUDA_FOUND})
       DOC "CUDA NVVM Library"
       )
     MESSAGE(STATUS ${CUDA_TOOLKIT_ROOT_DIR})
-    MESSAGE(STATUS "ArrayFire CUDA found. Enabling CUDA benchmark")
+    MESSAGE(STATUS "ArrayFire CUDA found.")
     
-    _LINK( ${ArrayFire_CUDA_LIBRARIES}
+    LIST (APPEND LIBRARIES_OPTIMIZED  ${ArrayFire_CUDA_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT} ${CUDA_LIBRARIES} ${NVVM_LIB} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY} ${CUDA_CUFFT_LIBRARIES} )
 ENDIF()
 
@@ -90,16 +90,15 @@ ENDIF()
 # Find Boost
 find_package(Boost COMPONENTS system filesystem REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
-_LINK( ${Boost_LIBRARIES})
-
+LIST(APPEND LIBRARIES_OPTIMIZED ${Boost_LIBRARIES})
 
 #####################################################################################
 
 # Asset Path
 #
 if ( NOT DEFINED ASSET_PATH ) 
-  get_filename_component ( _assets "${CMAKE_CURRENT_SOURCE_DIR}/../3dmodels" REALPATH )
-  set ( ASSET_PATH ${_assets} CACHE PATH "Full path to gvdb/shared_assets/" )  
+  get_filename_component ( _assets "${CMAKE_CURRENT_SOURCE_DIR}/../data" REALPATH )
+  set ( ASSET_PATH ${_assets} CACHE PATH "Full path to test data" )  
 endif()
 
 ####################################################################################
