@@ -82,7 +82,11 @@ IF(${ArrayFire_CUDA_FOUND} AND ${CUDA_FOUND})
     MESSAGE(STATUS "ArrayFire CUDA found.")
     
     LIST (APPEND LIBRARIES_OPTIMIZED  ${ArrayFire_CUDA_LIBRARIES}
-        ${CMAKE_THREAD_LIBS_INIT} ${CUDA_LIBRARIES} ${NVVM_LIB} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY} ${CUDA_CUFFT_LIBRARIES} )
+        ${CMAKE_THREAD_LIBS_INIT} ${CUDA_LIBRARIES} ${NVVM_LIB} 
+	${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY} 
+	${CUDA_CUFFT_LIBRARIES} )
+ 
+
 ENDIF()
 
 #####################################################################################
@@ -90,7 +94,7 @@ ENDIF()
 # Find Boost
 find_package(Boost COMPONENTS system filesystem REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
-LIST(APPEND LIBRARIES_OPTIMIZED ${Boost_LIBRARIES})
+LIST(APPEND LIBRARIES_OPTIMIZED ${Boost_LIBRARIES}) 
 
 #####################################################################################
 

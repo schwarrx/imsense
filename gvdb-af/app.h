@@ -23,6 +23,8 @@ public:
 	bool		ConvertToFloat(Vector3DI res, uchar* dat);
 	void		Rebuild() { Rebuild(m_VolMax, m_sparse, m_halo); }
 	void		Rebuild( Vector3DF vmax, bool bSparse, bool bHalo);
+	void        setVolumeParams();
+	void        setCameraParams();
 
 	void 		initGVDB();
 	void		start_guis(int w, int h);

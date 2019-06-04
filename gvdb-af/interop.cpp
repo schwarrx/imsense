@@ -7,6 +7,7 @@
 
 #include "interop.h"
 
+#include <arrayfire.h>
 #include <fstream>
 #include <iostream>
 
@@ -115,3 +116,4 @@ af::array binvoxFile2AF(std::string filespec) {
 	return A;
 
 }
+
