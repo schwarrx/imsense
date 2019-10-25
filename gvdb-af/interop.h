@@ -25,7 +25,7 @@ typedef unsigned char byte;
 
 af::array binvoxFile2AF(std::string filespec);
 
-af::array imageStack2AF(const path &directory);
+af::array imageStack2AF(const boost::filesystem::path &directory);
 
 
 #endif /* INTEROP_H_ */

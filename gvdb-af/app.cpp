@@ -5,7 +5,13 @@
  */
 
 #include "app.h"
+#include "interop.h"
 #include <cstdlib>
+
+#include <af/cuda.h>
+
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 using namespace nvdb;
 VolumeGVDB gvdb;
@@ -114,7 +120,6 @@ void App::LoadRAW(char* fname, Vector3DI res, int bpp) {
 }
 
 // ************** Data conversion *********************************************************
-
 bool App::ConvertToFloat(Vector3DI res, uchar* dat) {
 	float* vnew = (float*) malloc(res.x * res.y * res.z * sizeof(float));
 	float* vdest = vnew;
@@ -132,6 +137,7 @@ bool App::ConvertToFloat(Vector3DI res, uchar* dat) {
 	return true;
 }
 
+// ************** Resampling **** *********************************************************
 void App::Rebuild(Vector3DF vmax, bool bSparse, bool bHalo) {
 	gvdb.Clear();
 	gvdb.DestroyChannels();
@@ -192,26 +198,38 @@ void App::Rebuild(Vector3DF vmax, bool bSparse, bool bHalo) {
 			Vector3DF(0, 1, 0));
 }
 
+// ************** Main function  **************************************************************
+
 bool App::init() {
 
-	int w = getWidth(), h = getHeight();			// window width & height
 	initGVDB();
-	gvdb.AddPath("../data/imgStack/");
-	//gvdb.AddPath ( ASSET_PATH );
 
-	// Load RAW in CPU memory
+	boost::filesystem::path dirpath(
+			"/home/nelaturi/research/imsense/gvdb-af/data/imgStack/chestxray/subset");
+	af::array stack = imageStack2AF(dirpath);
+	printf("Done loading stack \n");
+	printf("Saving as binary ");
+	af::saveArray("key", stack, "stack.raw",false );
+
+
+
+	int xres, yres, zres = 0;
+	af::dim4 dims = stack.dims();
+	xres = dims[0]; yres = dims[1]; zres = dims[2];
+
 	char scnpath[1024];
-	printf("Loading volume data.\n");
-	if (!gvdb.getScene()->FindFile("head.raw", scnpath)) {
-		nvprintf("Cannot find file.\n");
-		nverror();
-	}
-	printf("Loading RAW. %s\n", scnpath);
-	LoadRAW(scnpath, Vector3DI(128, 256, 256), 1);// This sets m_DataRes and m_DataBuf
+	if ( !gvdb.getScene()->FindFile ( "stack.raw", scnpath ) ) {
+			nvprintf ( "Cannot find pvm file.\n" );
+			nverror();
+		}
 
-	// Convert data to float
-	printf("Convert to float.\n");
+	LoadRAW(scnpath, Vector3DI(xres,yres,zres),1);
+
 	ConvertToFloat(m_DataRes, (uchar*) m_DataBuf);
+
+
+	int w = getWidth(), h = getHeight();			// window width & height
+
 
 	// Transfer source data to GPU
 	printf("Transfer data to GPU.\n");
@@ -220,10 +238,11 @@ bool App::init() {
 	DataPtr& aux3D = gvdb.getAux(AUX_DATA3D);
 	gvdb.SetDataCPU(aux3D, m_DataRes.x * m_DataRes.y * m_DataRes.z, m_DataBuf,
 			0, sizeof(float));
+
 	gvdb.CommitData(aux3D);
 
 	// Rebuild the data in GVDB
-	m_VolMax = Vector3DF(256, 256, 256);
+	m_VolMax = Vector3DF(xres, yres, zres);
 	Rebuild(m_VolMax, m_sparse, m_halo);
 
 	// set volume visualization params -- default grayscale if commented

@@ -10,7 +10,9 @@
 #include <arrayfire.h>
 #include <fstream>
 #include <iostream>
-
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/lambda/bind.hpp>
 
 af::array binvoxFile2AF(std::string filespec) {
 
@@ -22,7 +24,8 @@ af::array binvoxFile2AF(std::string filespec) {
 	static float tx, ty, tz;
 	static float scale;
 
-	std::ifstream *input = new std::ifstream(filespec.c_str(), std::ios::in | std::ios::binary);
+	std::ifstream *input = new std::ifstream(filespec.c_str(),
+			std::ios::in | std::ios::binary);
 
 	//
 	// read header
@@ -30,8 +33,8 @@ af::array binvoxFile2AF(std::string filespec) {
 	std::string line;
 	*input >> line;  // #binvox
 	if (line.compare("#binvox") != 0) {
-		std::cout << "Error: first line reads [" << line << "] instead of [#binvox]"
-				<< std::endl;
+		std::cout << "Error: first line reads [" << line
+				<< "] instead of [#binvox]" << std::endl;
 		delete input;
 		return 0;
 	}
@@ -51,7 +54,8 @@ af::array binvoxFile2AF(std::string filespec) {
 		} else if (line.compare("scale") == 0) {
 			*input >> scale;
 		} else {
-			std::cout << "  unrecognized keyword [" << line << "], skipping" << std::endl;
+			std::cout << "  unrecognized keyword [" << line << "], skipping"
+					<< std::endl;
 			char c;
 			do {  // skip until end of line
 				c = input->get();
@@ -117,3 +121,43 @@ af::array binvoxFile2AF(std::string filespec) {
 
 }
 
+af::array imageStack2AF(const path &dirpath) {
+	// read a stack of images in a directory and populate to an AF array
+	// assume there are no subdirectories
+
+	//TODO-- do exception handling for dirpath being valid
+	// the code below counts the number of images in the directory
+	// not needed if stack.info has the x,y,z resolution
+	//	int nImages = std::count_if(directory_iterator(dirpath),
+	//			directory_iterator(),
+	//			static_cast<bool (*)(const path&)>(is_regular_file));
+
+
+	int xres, yres, zres = 0;
+	const path &idir = dirpath / "auxInfo/stack.info";
+	//assert that the file exists
+	assert(exists(idir));
+	//read resolution info
+	std::ifstream infoFile(idir.string().c_str());
+	infoFile >> xres >> yres >> zres;
+	af::array stack = af::constant(0, xres, yres,zres,b8);
+	af::dim4 dims = stack.dims();
+	printf("dims = [%lld %lld %lld]\n", dims[0], dims[1], dims[2]); // 4,5
+
+	// load images into the stack
+	directory_iterator end;
+	int count = 0;
+	for (directory_iterator iter(dirpath); iter != end; ++iter) {
+		if (is_directory(*iter)) {
+			continue;
+		} else {
+			std::cout << iter->path() << " (file)\n";
+			const char* fn = iter->path().string().c_str();
+			stack(af::span, af::span,count) = af::loadImage(fn, false);
+			count++;
+		}
+
+	}
+
+	return stack;
+}
