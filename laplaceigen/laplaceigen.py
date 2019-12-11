@@ -15,6 +15,10 @@ import pyvista as pv
 import tetgen
 
 
+def constructAdjacencyMatrix(grid):
+    print(grid.cells)
+
+
 def createTetMeshGrid(mesh):
     tet = tetgen.TetGen(mesh)
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
@@ -42,16 +46,20 @@ def testBasicVisualization():
     subgrid.plot(scalars=cell_qual, stitle='Quality', cmap='bwr', clim=[0,1],
                  flip_scalars=True, show_edges=True,)
 
+
 def testSphericalHarmonics():
     # test the computation of eigenfunctions on the sphere
     mesh = pv.Sphere()
     grid = createTetMeshGrid(mesh)
-    
+    constructAdjacencyMatrix(grid)
 
-def parseInput():
+
+def parsenputI():
     parser = OptionParser() 
     parser.add_option("-v", default=False, action='store_true', 
-                      help="visualize eigenfunctions")  
+                      help="visualize eigenfunctions")
+    parser.add_option("-s", default=False, action='store_true',
+                      help="test spherical harmonics")
     
     parser.usage = " ./laplaceigen.py [options] mesh"    
     (options, args) = parser.parse_args()
@@ -68,14 +76,16 @@ def main():
     
     
     (options,args) = parseInput()
-    visualize = options.v   
+    visualize = options.v
+    spherical = options.s
     mesh = pv.read(args[0])
     #grid = createTetMeshGrid(mesh)
-    
-    
-    
+
     if visualize :
         testBasicVisualization()
+
+    if spherical:
+        testSphericalHarmonics()
   
 main() 
 
