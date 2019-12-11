@@ -6,14 +6,10 @@ Created on Mon Dec  9 13:31:36 2019
 @author: nelaturi
 """
 
-
-
 from optparse import OptionParser
 from time import time as now
 from numpy import *
 from pylab import *
-
-import os
 import sys
 import pyvista as pv
 import tetgen
@@ -22,11 +18,16 @@ import tetgen
 def createTetMeshGrid(mesh):
     tet = tetgen.TetGen(mesh)
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
+    assert isinstance(tet.grid, object)
     grid = tet.grid
     return grid
 
 
-def testBasicVisualization(mesh, grid):
+def testBasicVisualization():
+    # basic example of cut tetrahedralized sphere visualization
+    # from tetgen documentation
+    mesh = pv.Sphere()
+    grid = createTetMeshGrid(mesh)
     # get cell centroids
     cells = grid.cells.reshape(-1, 5)[:, 1:]
     cell_center = grid.points[cells].mean(1)
@@ -39,14 +40,13 @@ def testBasicVisualization(mesh, grid):
     cell_qual = subgrid.quality 
     # plot quality
     subgrid.plot(scalars=cell_qual, stitle='Quality', cmap='bwr', clim=[0,1],
-                 flip_scalars=True, show_edges=True,) 
-    
+                 flip_scalars=True, show_edges=True,)
+
 def testSphericalHarmonics():
-    # check the code for correctness on spherical harmonics
+    # test the computation of eigenfunctions on the sphere
     mesh = pv.Sphere()
     grid = createTetMeshGrid(mesh)
-    testBasicVisualization(mesh,grid)
-     
+    
 
 def parseInput():
     parser = OptionParser() 
@@ -70,12 +70,12 @@ def main():
     (options,args) = parseInput()
     visualize = options.v   
     mesh = pv.read(args[0])
-    grid = createTetMeshGrid(mesh)
+    #grid = createTetMeshGrid(mesh)
     
     
     
-    if(visualize):
-        testSphericalHarmonics()
+    if visualize :
+        testBasicVisualization()
   
 main() 
 
