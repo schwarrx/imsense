@@ -8,14 +8,43 @@ Created on Mon Dec  9 13:31:36 2019
 
 from optparse import OptionParser
 from time import time as now
+from typing import TextIO
+
 from numpy import *
 from pylab import * 
 import sys
 import pyvista as pv
 import tetgen
+from simplicial import SimplicialComplex
 
+def tet2File(tet):
+    print('# elements: ', len(tet.elem))
+    print(tet.elem)
 
-    
+    print('# nodes: ', len(tet.node))
+    print(tet.node)
+
+    f_node: TextIO
+    with open('Tet.node', 'w') as f_node:
+        for item in tet.node:
+            assert isinstance(item, object)
+            f_node.write("%s\n" % item)
+    f_node.close()
+
+    f_elem: TextIO
+    with open('Tet.elem', 'w') as f_elem:
+        for item in tet.elem:
+            f_elem.write("%s\n" % item)
+    f_elem.close()
+
+def createSimplicialComplex(tet):
+    # turn the tet mesh into an oriented simplicial complex
+    complex = SimplicialComplex(oriented=True)
+    for elem in tet.elem:
+        print(elem)
+        complex.add(elem)
+
+    complex.plot(False, "poset.png")
 
 
 def createTetMeshGrid(mesh):
@@ -49,26 +78,9 @@ def testSphericalHarmonics():
     # test the computation of eigenfunctions on the sphere
     mesh = pv.Sphere()
     tet = createTetMeshGrid(mesh)
-    print('# elements: ',len(tet.elem))
-    print(tet.elem)
-    
-    print('# nodes: ',len(tet.node))
-    print(tet.node)
-    
-    with open('Sphere.node', 'w') as f_node:
-        for item in tet.node:
-            f_node.write("%s\n" % item)
+    #tet2File(tet)
+    createSimplicialComplex(tet)
 
-    f_node.close()
-    
-    with open('Sphere.elem', 'w') as f_elem:
-        for item in tet.elem:
-            f_elem.write("%s\n" % item)
-    
-    f_elem.close()
-    
-    grid = tet.grid
-    grid.plot(show_edges=True)
 
 
 
