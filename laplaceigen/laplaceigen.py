@@ -9,22 +9,20 @@ Created on Mon Dec  9 13:31:36 2019
 from optparse import OptionParser
 from time import time as now
 from numpy import *
-from pylab import *
+from pylab import * 
 import sys
 import pyvista as pv
 import tetgen
 
 
-def constructAdjacencyMatrix(grid):
-    print(grid.cells)
+    
 
 
 def createTetMeshGrid(mesh):
     tet = tetgen.TetGen(mesh)
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
     assert isinstance(tet.grid, object)
-    grid = tet.grid
-    return grid
+    return tet
 
 
 def testBasicVisualization():
@@ -50,11 +48,31 @@ def testBasicVisualization():
 def testSphericalHarmonics():
     # test the computation of eigenfunctions on the sphere
     mesh = pv.Sphere()
-    grid = createTetMeshGrid(mesh)
-    constructAdjacencyMatrix(grid)
+    tet = createTetMeshGrid(mesh)
+    print('# elements: ',len(tet.elem))
+    print(tet.elem)
+    
+    print('# nodes: ',len(tet.node))
+    print(tet.node)
+    
+    with open('Sphere.node', 'w') as f_node:
+        for item in tet.node:
+            f_node.write("%s\n" % item)
+
+    f_node.close()
+    
+    with open('Sphere.elem', 'w') as f_elem:
+        for item in tet.elem:
+            f_elem.write("%s\n" % item)
+    
+    f_elem.close()
+    
+    grid = tet.grid
+    grid.plot(show_edges=True)
 
 
-def parsenputI():
+
+def parseInput():
     parser = OptionParser() 
     parser.add_option("-v", default=False, action='store_true', 
                       help="visualize eigenfunctions")
@@ -63,29 +81,30 @@ def parsenputI():
     
     parser.usage = " ./laplaceigen.py [options] mesh"    
     (options, args) = parser.parse_args()
-    if len(args)!=1:
-        print(parser.usage)
-        sys.exit("Program requires an input mesh") 
-    else:
-        print("Computing Laplacian Eigenfunctions")
+      
+        
     
     return (options,args)
 
 
 def main(): 
     
-    
+    print("Computing Laplacian Eigenfunctions")
     (options,args) = parseInput()
     visualize = options.v
     spherical = options.s
-    mesh = pv.read(args[0])
-    #grid = createTetMeshGrid(mesh)
+     
 
     if visualize :
         testBasicVisualization()
-
-    if spherical:
+    elif spherical:
         testSphericalHarmonics()
+    else:
+        if len(args)!=1:
+            print(parser.usage)
+            sys.exit("Program requires an input mesh")
+        else:
+            mesh = pv.read(args[0])
   
 main() 
 
