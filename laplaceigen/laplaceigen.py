@@ -17,6 +17,29 @@ import pyvista as pv
 import tetgen
 from simplicial import SimplicialComplex
 
+def testBasicLaplacian():
+    # check to see if  laplacian can be derived from simplicial complex
+    c = SimplicialComplex(oriented=True)
+    c.add([3,2,1])
+    c.add([3,4,2])
+    c.add([3,7,4])
+    c.add([3,1,6])
+    c.add([3,6,7]) 
+    c.add([7,10,4])
+    c.add([7,9,10])
+    c.add([7,8,9])
+    c.add([7,6,8])
+    c.add([6,1,5])
+    c.add([6,5,8])
+    c.add([8,10,9]) 
+    i = c.incidence_matrix(0,2)
+    
+    l = i * i.T
+    print(l.toarray())
+    
+    
+
+
 def tet2File(tet):
     print('# elements: ', len(tet.elem))
     print(tet.elem)
@@ -37,15 +60,25 @@ def tet2File(tet):
             f_elem.write("%s\n" % item)
     f_elem.close()
 
-def createSimplicialComplex(tet):
+
+def combLaplacian(scomplex):
+    # build the combinatorial laplacian as divergence of gradient
+    tic = now()
+    laplacian=  scomplex.incidence_matrix(2, 1) * scomplex.incidence_matrix(1, 0)
+    toc= now()-tic
+    print('Built Laplacian in ' +repr(toc*1000) +' ms' ) 
+    return laplacian.toarray()
+
+def simplicialComplex(tet):
     # turn the tet mesh into an oriented simplicial complex
-    complex = SimplicialComplex(oriented=True)
-    for elem in tet.elem:
-        print(elem)
-        complex.add(elem)
-
-    complex.plot(False, "poset.png")
-
+    scomplex = SimplicialComplex(oriented=True) 
+    tic = now() 
+    for elem in tet.elem: 
+        scomplex.add(elem.tolist()) 
+    toc = now()-tic
+    print('Built simplicial complex in ' +repr(toc*1000) +' ms' ) 
+    return scomplex
+    
 
 def createTetMeshGrid(mesh):
     tet = tetgen.TetGen(mesh)
@@ -77,12 +110,15 @@ def testBasicVisualization():
 def testSphericalHarmonics():
     # test the computation of eigenfunctions on the sphere
     mesh = pv.Sphere()
+    computeLaplacian(mesh)
+   
+
+def computeLaplacian(mesh):
     tet = createTetMeshGrid(mesh)
-    #tet2File(tet)
-    createSimplicialComplex(tet)
-
-
-
+    print("Tet mesh has " + repr(len(tet.elem)) + " elements")
+     #tet2File(tet)
+    laplacian = combLaplacian(simplicialComplex(tet))
+    return laplacian
 
 def parseInput():
     parser = OptionParser() 
@@ -90,12 +126,12 @@ def parseInput():
                       help="visualize eigenfunctions")
     parser.add_option("-s", default=False, action='store_true',
                       help="test spherical harmonics")
+    parser.add_option("-t", default=False, action='store_true', 
+                      help='test basic Laplacian matrix')
     
     parser.usage = " ./laplaceigen.py [options] mesh"    
     (options, args) = parser.parse_args()
       
-        
-    
     return (options,args)
 
 
@@ -105,18 +141,22 @@ def main():
     (options,args) = parseInput()
     visualize = options.v
     spherical = options.s
-     
+    basictest = options.t
+      
 
     if visualize :
         testBasicVisualization()
     elif spherical:
         testSphericalHarmonics()
+    elif basictest:
+        testBasicLaplacian()
     else:
         if len(args)!=1:
             print(parser.usage)
             sys.exit("Program requires an input mesh")
         else:
             mesh = pv.read(args[0])
-  
+            laplacian = computeLaplacian(mesh)
+            print(laplacian)
 main() 
 
