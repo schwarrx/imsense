@@ -17,9 +17,17 @@ import tetgen
 import networkx as nx
 from itertools import combinations
 from collections import defaultdict
- 
+from scipy.sparse.linalg import eigs 
+
+def eigenfunctions(laplacian):
+    tic = now()
+    evals, evecs = eigs(laplacian,20, return_eigenvectors=True)
+    toc = now()-tic
+    print('Computed Laplacian eigenfunctions in '+ repr(toc*1000) + ' ms')
+    print(evecs)
 
 def laplacian(mesh):
+    tic = now()
     # given a tet mesh (nodes, elements) derive a dual graph
     # whose nodes are the elements, and edges are drawn between 
     # nodes whose corresponding tetrahedra share a vertex
@@ -42,10 +50,10 @@ def laplacian(mesh):
     degrees= np.array(dual.degree(range(len(mesh.elem))))
     row,col = np.diag_indices(A.shape[0])
     A[row,col] = degrees[:,1] 
+    toc = now()-tic
+    print('Constructed mesh Laplacian in '+repr(toc *1000) + ' ms' )
     return A
     
-
-
 def createTetMeshGrid(mesh):
     tet = tetgen.TetGen(mesh)
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
@@ -56,11 +64,9 @@ def createTetMeshGrid(mesh):
 
 def computeLaplacian(mesh):
     tet = createTetMeshGrid(mesh)
-    tet.make_manifold()  
-    tic = now()
-    laplacian(tet) 
-    toc = now()-tic
-    print('Constructed mesh Laplacian in '+repr(toc*1000) + 'ms')  
+    tet.make_manifold()   
+    eigenfunctions(laplacian(tet))
+    
 
 def parseInput():
     parser = OptionParser() 
