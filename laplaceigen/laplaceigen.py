@@ -45,6 +45,8 @@ def createDegMatrix(A):
         D[i,i] = sum(A[i:])
     return D
 
+
+
 def createAdjMatrix(tet): 
     # compute adjacency matrix
     nelems = len(tet.elem)
@@ -83,6 +85,7 @@ def tet2File(tet):
 def createTetMeshGrid(mesh):
     tet = tetgen.TetGen(mesh)
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
+    #tet2File(tet)
     assert isinstance(tet.grid, object)
     return tet
 
@@ -113,6 +116,8 @@ def testSphericalHarmonics():
 
 def computeLaplacian(mesh):
     tet = createTetMeshGrid(mesh)
+    tet.make_manifold()
+    print(tet.f)
     print("Tet mesh has " + repr(len(tet.elem)) + " elements")
     tic= now()
     A = createAdjMatrix(tet)
