@@ -10,19 +10,20 @@ from optparse import OptionParser
 from time import time as now
 from typing import TextIO
 
-from numpy import *
-from pylab import * 
+import numpy as np 
 import sys
 import pyvista as pv
 import tetgen 
 import networkx as nx
 from itertools import combinations
 from collections import defaultdict
+ 
 
-def dualGraph(mesh):
+def laplacian(mesh):
     # given a tet mesh (nodes, elements) derive a dual graph
     # whose nodes are the elements, and edges are drawn between 
     # nodes whose corresponding tetrahedra share a vertex
+    # note: this is not strictly the dual in the sense of simplicial complex
     dual = nx.Graph()
     # map each vertex to all the elements that contain it
     vmap = defaultdict(list) 
@@ -35,8 +36,13 @@ def dualGraph(mesh):
     for k,v in vmap.items():
             # draw an edge between the pairwise combinations of
             # the value corresponding to a vertex key
-            dual.add_edges_from(list(combinations(v,2))) 
-    return dual
+            dual.add_edges_from(list(combinations(v,2)))  
+    # convert the graph to an adjacency matrix
+    A = nx.to_numpy_matrix(dual)
+    degrees= np.array(dual.degree(range(len(mesh.elem))))
+    row,col = np.diag_indices(A.shape[0])
+    A[row,col] = degrees[:,1] 
+    return A
     
 
 
@@ -52,11 +58,9 @@ def computeLaplacian(mesh):
     tet = createTetMeshGrid(mesh)
     tet.make_manifold()  
     tic = now()
-    dual = dualGraph(tet)
+    laplacian(tet) 
     toc = now()-tic
-    print('Constructed dual graph in '+repr(toc*1000) + 'ms')
-    A = nx.to_numpy_matrix(dual)
-    print(list(dual.degree(range(len(tet.elem)))))
+    print('Constructed mesh Laplacian in '+repr(toc*1000) + 'ms')  
 
 def parseInput():
     parser = OptionParser() 
