@@ -14,8 +14,9 @@ from numpy import *
 from pylab import * 
 import sys
 import pyvista as pv
-import tetgen
-from simplicial import SimplicialComplex
+import tetgen 
+import networkx as nx
+from itertools import combinations
 
 def testBasicLaplacian():
     # check to see if  laplacian can be derived from simplicial complex
@@ -32,13 +33,31 @@ def testBasicLaplacian():
     c.add([6,1,5])
     c.add([6,5,8])
     c.add([8,10,9]) 
-    i = c.incidence_matrix(0,2)
+    i = c.incidence_matrix(0,1)*c.incidence_matrix(1,0)
     
-    l = i * i.T
-    print(l.toarray())
-    
-    
+    l = i.toarray()
+    print(l) 
 
+def createDegMatrix(A):
+    # use adjacency matrix to compute degree
+    D = zeros_like(A)
+    for i in range(A.shape[0]):
+        D[i,i] = sum(A[i:])
+    return D
+
+def createAdjMatrix(tet): 
+    # compute adjacency matrix
+    nelems = len(tet.elem)
+    elem_labels = range(nelems) 
+    #find pairwise intersections  
+    A = zeros((nelems,nelems))
+    for p,q in combinations(elem_labels,2): 
+        l1 = set(tet.elem[p])
+        l2 = set(tet.elem[q])  
+        adj = (len(l1 &l2) > 0) 
+        if(adj):
+            A[p,q] = 1  
+    return A
 
 def tet2File(tet):
     print('# elements: ', len(tet.elem))
@@ -60,25 +79,6 @@ def tet2File(tet):
             f_elem.write("%s\n" % item)
     f_elem.close()
 
-
-def combLaplacian(scomplex):
-    # build the combinatorial laplacian as divergence of gradient
-    tic = now()
-    laplacian=  scomplex.incidence_matrix(2, 1) * scomplex.incidence_matrix(1, 0)
-    toc= now()-tic
-    print('Built Laplacian in ' +repr(toc*1000) +' ms' ) 
-    return laplacian.toarray()
-
-def simplicialComplex(tet):
-    # turn the tet mesh into an oriented simplicial complex
-    scomplex = SimplicialComplex(oriented=True) 
-    tic = now() 
-    for elem in tet.elem: 
-        scomplex.add(elem.tolist()) 
-    toc = now()-tic
-    print('Built simplicial complex in ' +repr(toc*1000) +' ms' ) 
-    return scomplex
-    
 
 def createTetMeshGrid(mesh):
     tet = tetgen.TetGen(mesh)
@@ -110,15 +110,20 @@ def testBasicVisualization():
 def testSphericalHarmonics():
     # test the computation of eigenfunctions on the sphere
     mesh = pv.Sphere()
-    computeLaplacian(mesh)
-   
 
 def computeLaplacian(mesh):
     tet = createTetMeshGrid(mesh)
     print("Tet mesh has " + repr(len(tet.elem)) + " elements")
-     #tet2File(tet)
-    laplacian = combLaplacian(simplicialComplex(tet))
-    return laplacian
+    tic= now()
+    A = createAdjMatrix(tet)
+    toc = now()-tic
+    print('Created adjacency matrix in '+repr(toc) +'s')
+    tic = now()
+    D = createDegMatrix(A)
+    toc = now() - tic
+    print('Created degree matrix in '+repr(toc) + ' s')
+    L = D-A
+    return L 
 
 def parseInput():
     parser = OptionParser() 
