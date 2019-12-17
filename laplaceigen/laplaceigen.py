@@ -19,12 +19,19 @@ from itertools import combinations
 from collections import defaultdict
 from scipy.sparse.linalg import eigs 
 
+
+def visualize(tet, field_vals):
+    grid = tet.grid
+    grid.plot(scalars=field_vals, stitle='Eigenfunction', 
+              cmap='bwr', show_edges = True,)
+    
+
 def eigenfunctions(laplacian):
     tic = now()
     evals, evecs = eigs(laplacian,20, return_eigenvectors=True)
     toc = now()-tic
     print('Computed Laplacian eigenfunctions in '+ repr(toc*1000) + ' ms')
-    print(evecs)
+    return (evals, np.real(evecs))
 
 def laplacian(mesh):
     tic = now()
@@ -59,13 +66,16 @@ def createTetMeshGrid(mesh):
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
     #tet2File(tet)
     assert isinstance(tet.grid, object)
-    print('Number of tets =' + repr(len(tet.elem)))
+    print('Number of tets =' + repr(len(tet.elem))) 
+    
     return tet
 
 def computeLaplacian(mesh):
     tet = createTetMeshGrid(mesh)
     tet.make_manifold()   
-    eigenfunctions(laplacian(tet))
+    evals, evecs = eigenfunctions(laplacian(tet))
+    evecs = np.array(evecs) 
+    visualize(tet, evecs[:,15])
     
 
 def parseInput():
