@@ -17,41 +17,58 @@ import tetgen
 import networkx as nx
 from itertools import combinations
 from collections import defaultdict
-from scipy.sparse.linalg import eigs 
-
+from scipy.sparse.linalg import eigs  
+import networkx.drawing.nx_pydot as pyd
+import matplotlib.pyplot as plt
 
 def visualize(tet, field_vals):
+      
     grid = tet.grid
     grid.plot(scalars=field_vals, stitle='Eigenfunction', 
-              cmap='bwr', show_edges = True,)
+              cmap='bwr', show_edges = False,)
     
 
-def eigenfunctions(laplacian):
+def eigenfunctions(laplacian, n):
     tic = now()
-    evals, evecs = eigs(laplacian,20, return_eigenvectors=True)
+    evals, evecs = eigs(laplacian,n, return_eigenvectors=True)
     toc = now()-tic
     print('Computed Laplacian eigenfunctions in '+ repr(toc*1000) + ' ms')
     return (evals, np.real(evecs))
+
+def drawGraph(dual):
+    pos = nx.spectral_layout(dual)
+    nx.draw(dual, pos=pos, with_labels=False)
+    plt.show()
 
 def laplacian(mesh):
     tic = now()
     # given a tet mesh (nodes, elements) derive a dual graph
     # whose nodes are the elements, and edges are drawn between 
-    # nodes whose corresponding tetrahedra share a vertex
-    # note: this is not strictly the dual in the sense of simplicial complex
+    # nodes whose corresponding tetrahedra share a face
     dual = nx.Graph()
-    # map each vertex to all the elements that contain it
-    vmap = defaultdict(list) 
+    # map each face to the elements that bound it
+    fmap = defaultdict(set) 
     for (elid, tetvertices) in enumerate(mesh.elem): 
-        dual.add_node(elid, verts=tetvertices)
-        for vertex in tetvertices:
-            # iterate through the nodes in the element and create vertex map
-            vmap[vertex].append(elid)
+        dual.add_node(elid, verts=tetvertices) 
+        for face in combinations(tetvertices,3):
+            # iterate through the faces and map to the parent element
+            face = tuple(sorted(face))
+            #print(repr(face) + '--->' + repr(elid))
+            fmap[face].add(elid)  
     # now create the edges between nodes in the dual graph 
-    for k,v in vmap.items():
-            # draw an edge between the pairwise combinations of
-            # the value corresponding to a vertex key
-            dual.add_edges_from(list(combinations(v,2)))  
+    for k,v in fmap.items():
+            # draw an edge between the items in the fmap
+            # (i.e. the elements sharing a face)
+            flist = list(v)
+            #print(repr(k) + '--->' +  repr(flist))
+            if(len(flist) ==2):
+                # only add an edge when it bounds two faces,
+                # not for boundary faces
+                dual.add_edge(flist[0],flist[1])
+                
+    # Draw the dual graph 
+    #drawGraph(dual)
+    assert(nx.is_connected(dual))
     # convert the graph to an adjacency matrix
     A = nx.to_numpy_matrix(dual)
     degrees= np.array(dual.degree(range(len(mesh.elem))))
@@ -73,9 +90,9 @@ def createTetMeshGrid(mesh):
 def computeLaplacian(mesh):
     tet = createTetMeshGrid(mesh)
     tet.make_manifold()   
-    evals, evecs = eigenfunctions(laplacian(tet))
-    evecs = np.array(evecs) 
-    visualize(tet, evecs[:,15])
+    evals, evecs = eigenfunctions(laplacian(tet),50)
+    evecs = np.array(evecs)  
+    visualize(tet, evecs[:,40])
     
 
 def parseInput():
