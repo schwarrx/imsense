@@ -28,7 +28,9 @@ def visualize(tet, field_vals, nx, ny):
     for x,y in product(range(nx), range(ny)):
         p.subplot(x,y)
         #print(field_vals[:,idx])
-        p.add_mesh(tet.grid, scalars=field_vals[:,idx], show_edges=False )
+        field_val = field_vals[:,idx]
+        field_val/= np.linalg.norm(field_val)
+        p.add_mesh(tet.grid, scalars=field_val, show_edges=False )
         idx +=1
     p.show()
 
@@ -45,6 +47,9 @@ def drawGraph(dual):
     plt.show()
 
 def laplacian(mesh):
+    # note - cell_dim = 2 for surface meshes, 3 for tet meshes
+    # TODO -- update the laplacian code to be cell dimension independent
+    # Right now it only works for tet meshes
     tic = now()
     # given a tet mesh (nodes, elements) derive a dual graph
     # whose nodes are the elements, and edges are drawn between 
@@ -111,6 +116,10 @@ def parseInput():
 def testSphericalHarmonics():
     # test spherical harmonics as eigenfunctions of laplacian on sphere
     sphere = pv.Sphere(theta_resolution=20, phi_resolution=20)
+    # note that this function tests against the surface mesh of the sphere
+    # does not invoke tetrahedralization. If the code is correctly written 
+    # the approach should scale by switching dimensions 
+    
     tet = tetgen.TetGen(sphere)
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
     #tet.make_manifold()
@@ -170,8 +179,8 @@ def main():
         else:
             mesh = pv.read(args[0])
             tet = createTetMesh(mesh)
-            nevecs = 40
-            computeLaplacian(tet,nevecs)
-            #print(laplacian)
+            nevecs = 100
+            (evals, evecs) = computeLaplacian(tet,nevecs)
+            visualize(tet,evecs, 10,10)
 main() 
 
