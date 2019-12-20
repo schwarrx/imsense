@@ -15,18 +15,22 @@ import sys
 import pyvista as pv
 import tetgen 
 import networkx as nx
-from itertools import combinations
+from itertools import combinations, product
 from collections import defaultdict
 from scipy.sparse.linalg import eigs  
 import networkx.drawing.nx_pydot as pyd
 import matplotlib.pyplot as plt
 from scipy.special import sph_harm
 
-def visualize(tet, field_vals):
-      
-    grid = tet.grid
-    grid.plot(scalars=field_vals, stitle='Eigenfunction', 
-              cmap='bwr', show_edges = False,)
+def visualize(tet, field_vals, nx, ny): 
+    p = pv.Plotter(shape=(nx,ny))
+    idx= 0
+    for x,y in product(range(nx), range(ny)):
+        p.subplot(x,y)
+        #print(field_vals[:,idx])
+        p.add_mesh(tet.grid, scalars=field_vals[:,idx], show_edges=False )
+        idx +=1
+    p.show()
 
 def eigenfunctions(laplacian, n):
     tic = now()
@@ -87,8 +91,8 @@ def createTetMesh(mesh):
     print('Number of tets =' + repr(len(tet.elem)))  
     return tet
 
-def computeLaplacian(tet):  
-    evals, evecs = eigenfunctions(laplacian(tet),50)
+def computeLaplacian(tet, nevecs):  
+    evals, evecs = eigenfunctions(laplacian(tet),nevecs)
     evecs = np.array(evecs)  
     return (evals, evecs)
     
@@ -102,24 +106,17 @@ def parseInput():
     
     parser.usage = " ./laplaceigen.py [options] mesh"    
     (options, args) = parser.parse_args()
-    return (options,args)
-
-def cart2sph(x, y, z):
-    # convert cartesian to spherical coordinates
-    hxy = np.hypot(x, y)
-    r = np.hypot(hxy, z)
-    el = np.arctan2(z, hxy)
-    az = np.arctan2(y, x)
-    return az, el, r
+    return (options,args) 
 
 def testSphericalHarmonics():
     # test spherical harmonics as eigenfunctions of laplacian on sphere
-    sphere = pv.Sphere(theta_resolution=10, phi_resolution=10)
+    sphere = pv.Sphere(theta_resolution=20, phi_resolution=20)
     tet = tetgen.TetGen(sphere)
     tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
     #tet.make_manifold()
     print('Number of tets =' + repr(len(tet.elem)))
-    evals, evecs = computeLaplacian(tet)
+    nevecs = 12
+    evals, evecs = computeLaplacian(tet, nevecs)  
     # test against spherical harmonic Y^m_l (see Wikipedia)
     coords = tet.node  
     # compute the spherical coords from cartesian coords  
@@ -141,7 +138,8 @@ def testSphericalHarmonics():
     evec = evecs[:,0]
     normeigs = evec/np.linalg.norm(evec)
     
-    print(normeigs, harmonics)
+    #print(normeigs, harmonics)
+    visualize(tet,evecs,3,4)
      
     '''
     #visualize
@@ -171,8 +169,9 @@ def main():
             sys.exit("Program requires an input mesh")
         else:
             mesh = pv.read(args[0])
-            tet = createTetMesh(mesh)  
-            computeLaplacian(tet)
+            tet = createTetMesh(mesh)
+            nevecs = 40
+            computeLaplacian(tet,nevecs)
             #print(laplacian)
 main() 
 
