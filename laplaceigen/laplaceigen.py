@@ -46,10 +46,11 @@ def drawGraph(dual):
     nx.draw(dual, pos=pos, with_labels=False)
     plt.show()
 
-def laplacian(mesh):
-    # note - cell_dim = 2 for surface meshes, 3 for tet meshes
-    # TODO -- update the laplacian code to be cell dimension independent
-    # Right now it only works for tet meshes
+def laplacian(mesh_elements):
+    # note - face_npoints = 2 for surface meshes, 3 for tet meshes  
+    # i.e. triangle faces (edges) have two points, tet faces (tris) have 3
+    face_npoints = mesh_elements.shape[1]-1
+    print("face npoints = " + repr(face_npoints))
     tic = now()
     # given a tet mesh (nodes, elements) derive a dual graph
     # whose nodes are the elements, and edges are drawn between 
@@ -57,9 +58,9 @@ def laplacian(mesh):
     dual = nx.Graph()
     # map each face to the elements that bound it
     fmap = defaultdict(set) 
-    for (elid, tetvertices) in enumerate(mesh.elem): 
-        dual.add_node(elid, verts=tetvertices) 
-        for face in combinations(tetvertices,3):
+    for (elid, vertices) in enumerate(mesh_elements): 
+        dual.add_node(elid, verts=vertices) 
+        for face in combinations(vertices,face_npoints):
             # iterate through the faces and map to the parent element
             face = tuple(sorted(face))
             #print(repr(face) + '--->' + repr(elid))
@@ -79,12 +80,11 @@ def laplacian(mesh):
     #assert(nx.is_connected(dual))
     # convert the graph to an adjacency matrix
     A = nx.to_numpy_matrix(dual)
-    degrees= np.array(dual.degree(range(len(mesh.elem))))
+    degrees= np.array(dual.degree(range(len(mesh_elements))))
     row,col = np.diag_indices(A.shape[0])
     A[row,col] = degrees[:,1] 
     toc = now()-tic
-    print('Constructed mesh Laplacian in '+repr(toc *1000) + ' ms' )
-    print(A)
+    print('Constructed mesh Laplacian in '+repr(toc *1000) + ' ms' ) 
     return A
     
 def createTetMesh(mesh):
@@ -97,7 +97,7 @@ def createTetMesh(mesh):
     return tet
 
 def computeLaplacian(tet, nevecs):  
-    evals, evecs = eigenfunctions(laplacian(tet),nevecs)
+    evals, evecs = eigenfunctions(laplacian(tet.elem),nevecs)
     evecs = np.array(evecs)  
     return (evals, evecs)
     
@@ -115,19 +115,17 @@ def parseInput():
 
 def testSphericalHarmonics():
     # test spherical harmonics as eigenfunctions of laplacian on sphere
-    sphere = pv.Sphere(theta_resolution=20, phi_resolution=20)
+    sphere = pv.Sphere(theta_resolution=20, phi_resolution=20) 
+    elems = sphere.faces.reshape(sphere.n_faces,4)
+    elems = np.delete(elems,0,1)
+    print(elems)
+    
+    coords = sphere.points
     # note that this function tests against the surface mesh of the sphere
     # does not invoke tetrahedralization. If the code is correctly written 
     # the approach should scale by switching dimensions 
     
-    tet = tetgen.TetGen(sphere)
-    tet.tetrahedralize(order=1, mindihedral=20, minratio=1.5)
-    #tet.make_manifold()
-    print('Number of tets =' + repr(len(tet.elem)))
-    nevecs = 12
-    evals, evecs = computeLaplacian(tet, nevecs)  
-    # test against spherical harmonic Y^m_l (see Wikipedia)
-    coords = tet.node  
+    # test against spherical harmonic Y^m_l (see Wikipedia) 
     # compute the spherical coords from cartesian coords  
     sphmap = lambda x,y,z: (np.hypot(np.hypot(x,y),z), 
                             np.arctan2(y,x),
@@ -140,15 +138,18 @@ def testSphericalHarmonics():
                                     r*np.sin(theta)*np.sin(phi), 
                                     r* np.cos(theta))
     remap = np.array(list(map(cartmap, sphcoords[:,0], sphcoords[:,1], sphcoords[:,2])))
-    assert(np.linalg.norm(remap-coords) < 1e-10)
+    
+    #print(np.linalg.norm(remap-coords))
+    assert(np.linalg.norm(remap-coords) < 1e-6)
     
     m,n = 0,0
     harmonics = np.real(sph_harm(m,n,sphcoords[:,1], sphcoords[:,2]))
-    evec = evecs[:,0]
-    normeigs = evec/np.linalg.norm(evec)
     
-    #print(normeigs, harmonics)
-    visualize(tet,evecs,3,4)
+    nevecs = 12
+    evals,evecs = eigenfunctions(laplacian(elems), nevecs)
+    evec = evecs[:,0]
+    normeigs = evec/np.linalg.norm(evec) 
+    #visualize(tet,evecs,3,4)
      
     '''
     #visualize
