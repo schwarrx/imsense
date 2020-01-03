@@ -7,9 +7,7 @@ Created on Mon Dec  9 13:31:36 2019
 """
 
 from optparse import OptionParser
-from time import time as now
-from typing import TextIO
-
+from time import time as now  
 import numpy as np 
 import sys
 import pyvista as pv
@@ -17,8 +15,7 @@ import tetgen
 import networkx as nx
 from itertools import combinations, product
 from collections import defaultdict
-from scipy.sparse.linalg import eigs  
-import networkx.drawing.nx_pydot as pyd
+from scipy.sparse.linalg import eigs   
 import matplotlib.pyplot as plt
 from scipy.special import sph_harm
 
@@ -45,7 +42,7 @@ def drawGraph(dual):
     pos = nx.spectral_layout(dual)
     nx.draw(dual, pos=pos, with_labels=False)
     plt.show()
-
+     
 def laplacian(mesh_elements):
     # note - face_npoints = 2 for surface meshes, 3 for tet meshes  
     # i.e. triangle faces (edges) have two points, tet faces (tris) have 3
@@ -100,15 +97,11 @@ def computeLaplacian(tet, nevecs):
     evals, evecs = eigenfunctions(laplacian(tet.elem),nevecs)
     evecs = np.array(evecs)  
     return (evals, evecs)
-    
 
 def parseInput():
     parser = OptionParser()  
     parser.add_option("-s", default=False, action='store_true',
-                      help="test spherical harmonics")
-    parser.add_option("-t", default=False, action='store_true', 
-                      help='test basic Laplacian matrix')
-    
+                      help="test spherical harmonics") 
     parser.usage = " ./laplaceigen.py [options] mesh"    
     (options, args) = parser.parse_args()
     return (options,args) 
@@ -116,11 +109,13 @@ def parseInput():
 def testSphericalHarmonics():
     # test spherical harmonics as eigenfunctions of laplacian on sphere
     sphere = pv.Sphere(theta_resolution=20, phi_resolution=20) 
-    elems = sphere.faces.reshape(sphere.n_faces,4)
-    elems = np.delete(elems,0,1)
-    print(elems)
-    
-    coords = sphere.points
+    e = sphere.faces.reshape(sphere.n_faces,4) # e -- elements
+    e = np.delete(e,0,1)
+    coords = np.empty(e.shape) # compute barycentric coords 
+    v = np.asarray(sphere.points)   # v -- vertices
+    for i in range(sphere.n_faces): 
+         bary =  (v[e[i,0]] + v[e[i,1]] + v[e[i,2]])/3  
+         coords[i] = bary  
     # note that this function tests against the surface mesh of the sphere
     # does not invoke tetrahedralization. If the code is correctly written 
     # the approach should scale by switching dimensions 
@@ -137,42 +132,39 @@ def testSphericalHarmonics():
     cartmap = lambda r,phi, theta: (r*np.sin(theta)*np.cos(phi), 
                                     r*np.sin(theta)*np.sin(phi), 
                                     r* np.cos(theta))
-    remap = np.array(list(map(cartmap, sphcoords[:,0], sphcoords[:,1], sphcoords[:,2])))
+    remap = np.array(list(map(cartmap, sphcoords[:,0],
+                              sphcoords[:,1], sphcoords[:,2])))
     
     #print(np.linalg.norm(remap-coords))
     assert(np.linalg.norm(remap-coords) < 1e-6)
     
-    m,n = 0,0
-    harmonics = np.real(sph_harm(m,n,sphcoords[:,1], sphcoords[:,2]))
-    
+    m,n = 0,1
+    harmonics = np.real(sph_harm(m,n,sphcoords[:,1], sphcoords[:,2])) 
     nevecs = 12
-    evals,evecs = eigenfunctions(laplacian(elems), nevecs)
-    evec = evecs[:,0]
-    normeigs = evec/np.linalg.norm(evec) 
-    #visualize(tet,evecs,3,4)
-     
-    '''
+    evals,evecs = eigenfunctions(laplacian(e), nevecs)
+    evec = evecs[:,4]
+    normeigs = evec/np.linalg.norm(evec)   
+    
+    
+    cloud = pv.PolyData(coords) 
     #visualize
     p = pv.Plotter(shape=(1,2))
     p.subplot(0,0)
-    p.add_mesh(tet.grid,scalars=harmonics, show_edges=False)
+    p.add_mesh(cloud,scalars=harmonics, show_edges=False)
     p.subplot(0,1)
-    p.add_mesh(tet.grid,scalars=normeigs, show_edges=True)
+    p.add_mesh(cloud,scalars=normeigs, show_edges=False)
     p.show()
-    '''
+    
     
     
 
 def main():  
     print("Computing Laplacian Eigenfunctions")
     (options,args) = parseInput() 
-    spherical = options.s
-    basictest = options.t
+    spherical = options.s 
     
     if spherical:
-        testSphericalHarmonics()
-    elif basictest:
-        testBasicLaplacian()
+        testSphericalHarmonics() 
     else:
         if len(args)!=1:
             print(parser.usage)
